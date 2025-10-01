@@ -1,0 +1,59 @@
+
+export enum BaselineStatus {
+  Widely = 'widely available',
+  Newly = 'newly available',
+  Limited = 'limited availability',
+  Unknown = 'unknown',
+}
+
+// Type for api.webstatus.dev feature response
+export interface DashboardFeature {
+  identifier: string;
+  name: string;
+  description: string;
+  specifications: { name: string, url: string }[];
+  mdn_url?: string;
+  baseline: {
+    status: 'wide' | 'limited' | 'newly';
+    since?: string;
+  };
+  browser_support: {
+    browser: string;
+    support: {
+        version_added: string | boolean;
+    };
+  }[];
+  web_platform_tests?: {
+    total_tests: number;
+    passing_tests: number;
+  };
+}
+
+export enum MessageSender {
+  User = 'user',
+  AI = 'ai',
+}
+
+export interface ChatMessage {
+  sender: MessageSender;
+  text: string;
+  feature?: DashboardFeature;
+}
+
+export interface ScanIssue {
+  file: string;
+  featureId: string;
+  name: string; // Add feature name for better readability
+  status: BaselineStatus;
+  line: number;
+  column: number;
+  confidence?: number; // Add confidence for fuzzy matches
+}
+
+export interface ScanResult {
+  score: number;
+  issues: ScanIssue[];
+  stats: {
+    [key in BaselineStatus]: number;
+  };
+}

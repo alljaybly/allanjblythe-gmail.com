@@ -1,0 +1,127 @@
+
+import * as babelParser from '@babel/parser';
+import traverse from '@babel/traverse';
+import * as cssTree from 'css-tree';
+import * as htmlparser2 from 'htmlparser2';
+import { ScanIssue, BaselineStatus, DashboardFeature } from '../types';
+
+const mapApiStatusToBaselineStatus = (feature?: DashboardFeature): BaselineStatus => {
+  if (!feature) return BaselineStatus.Unknown;
+  switch (feature.baseline?.status) {
+    case 'wide': return BaselineStatus.Widely;
+    case 'newly': return BaselineStatus.Newly;
+    case 'limited': return BaselineStatus.Limited;
+    default: return BaselineStatus.Unknown;
+  }
+};
+
+// --- JavaScript Scanner ---
+export const scanJavaScript = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {
+  const issues: ScanIssue[] = [];
+  const jsFeatures = featureMap.filter(f => f.identifier.startsWith('api-') || f.identifier.startsWith('js-'));
+
+  try {
+    const ast = babelParser.parse(code, {
+      sourceType: 'module',
+      plugins: ['typescript', 'jsx', 'classProperties', 'privateMethods'],
+      errorRecovery: true,
+    });
+
+    traverse(ast, {
+      enter(path) {
+        // Example: Detect structuredClone by name
+        if (path.isIdentifier({ name: 'structuredClone' }) && path.node.loc) {
+          const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
+          if (feature) {
+            issues.push({
+              file: filename,
+              featureId: feature.identifier,
+              name: feature.name,
+              status: mapApiStatusToBaselineStatus(feature),
+              line: path.node.loc.start.line,
+              column: path.node.loc.start.column,
+            });
+          }
+        }
+        // Add more sophisticated checks here for other JS features based on AST node types
+      },
+    });
+  } catch (error) {
+    console.error(`Failed to parse JS in ${filename}:`, error);
+  }
+  return issues;
+};
+
+// --- CSS Scanner ---
+export const scanCss = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {
+    const issues: ScanIssue[] = [];
+    const cssFeatures = featureMap.filter(f => f.identifier.startsWith('css-'));
+
+    try {
+        const ast = cssTree.parse(code, { positions: true, onParseError: () => {} });
+        cssTree.walk(ast, (node) => {
+            if (node.type === 'Property' && node.loc) {
+                const feature = cssFeatures.find(f => f.identifier.includes(node.name));
+                if (feature) {
+                    issues.push({
+                        file: filename,
+                        featureId: feature.identifier,
+                        name: feature.name,
+                        status: mapApiStatusToBaselineStatus(feature),
+                        line: node.loc.start.line,
+                        column: node.loc.start.column,
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        console.error(`Failed to parse CSS in ${filename}:`, error);
+    }
+    return issues;
+}
+
+// --- HTML Scanner ---
+export const scanHtml = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {
+    const issues: ScanIssue[] = [];
+    const htmlFeatures = featureMap.filter(f => f.identifier.startsWith('html-'));
+
+    const parser = new htmlparser2.Parser({
+        onopentag(name, attribs) {
+            const loc = (parser as any).getLocation();
+            // Check for tags
+            const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
+            if (tagFeature) {
+                issues.push({
+                    file: filename,
+                    featureId: tagFeature.identifier,
+                    name: tagFeature.name,
+                    status: mapApiStatusToBaselineStatus(tagFeature),
+                    line: loc.line,
+                    column: loc.col,
+                });
+            }
+            // Check for attributes
+            for (const attr in attribs) {
+                 const attrFeature = htmlFeatures.find(f => f.identifier.includes(`attribute-${attr}`));
+                 if (attrFeature) {
+                     issues.push({
+                        file: filename,
+                        featureId: attrFeature.identifier,
+                        name: attrFeature.name,
+                        status: mapApiStatusToBaselineStatus(attrFeature),
+                        line: loc.line,
+                        column: loc.col,
+                     });
+                 }
+            }
+        }
+    }, { xmlMode: false, recognizeSelfClosing: true, withStartIndices: true, withEndIndices: true, withLocations: true });
+
+    try {
+      parser.write(code);
+      parser.end();
+    } catch (error) {
+       console.error(`Failed to parse HTML in ${filename}:`, error);
+    }
+    return issues;
+};

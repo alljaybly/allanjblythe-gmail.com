@@ -1,0 +1,7 @@
+{
+  "name": "Baseline Feature Scout",
+  "description": "An AI-powered tool to help web developers instantly discover, evaluate, and adopt modern web features using Baseline data. Reduces friction from compatibility checks by providing clear, actionable insights and tooling integrations.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
