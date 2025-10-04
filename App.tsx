@@ -10,6 +10,7 @@ import Chat from './pages/Chat';
 import Scan from './pages/Scan';
 import Export from './pages/Export';
 import Learn from './pages/Learn';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <motion.div
@@ -31,7 +32,11 @@ const AppRoutes = () => {
         <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
         <Route path="/scan" element={<PageWrapper><Scan /></PageWrapper>} />
         <Route path="/export" element={<PageWrapper><Export /></PageWrapper>} />
-        <Route path="/learn" element={<PageWrapper><Learn /></PageWrapper>} />
+        <Route path="/learn" element={
+          <ErrorBoundary>
+            <PageWrapper><Learn /></PageWrapper>
+          </ErrorBoundary>
+        } />
       </Routes>
     </AnimatePresence>
   );

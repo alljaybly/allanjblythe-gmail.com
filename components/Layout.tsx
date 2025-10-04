@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -88,7 +89,7 @@ const Footer = () => (
         A hackathon project for the Google/Devpost Baseline Tooling Hackathon.
       </p>
       <a
-        href="https://github.com/your-repo/baseline-feature-scout" // Replace with actual repo URL
+        href="https://github.com/alljaybly/allanjblythe-gmail.com"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 mt-2 hover:text-cosmic-blue"

@@ -1,3 +1,11 @@
+import 'react';
+
+declare module 'react' {
+    interface InputHTMLAttributes<T> {
+        webkitdirectory?: string;
+        directory?: string;
+    }
+}
 
 export enum BaselineStatus {
   Widely = 'widely available',

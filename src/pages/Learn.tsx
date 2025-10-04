@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import MonacoEditor, { OnMount } from '@monaco-editor/react';
@@ -7,7 +6,7 @@ import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { Check, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { scanCss, scanHtml, scanJavaScript } from '../services/codeScanner';
 import { useDashboardAPI } from '../hooks/useDashboardAPI';
-import { DashboardFeature, BaselineStatus } from '../types';
+import { BaselineStatus } from '../types';
 import { editor } from 'monaco-editor';
 import { debounce } from 'lodash-es';
 
@@ -116,6 +115,9 @@ const Learn = () => {
     
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<any>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
+    const lastWidthRef = useRef(0);
+
 
     const constructPreview = (htmlCode: string, cssCode: string, jsCode: string) => {
         return `
@@ -142,7 +144,7 @@ const Learn = () => {
     }, [code, tutorial.language]);
 
     const validateCode = useCallback((currentCode: string) => {
-        if (!featureMap || !editorRef.current || !monacoRef.current) return;
+        if (!Array.isArray(featureMap) || !editorRef.current || !monacoRef.current) return;
         
         let issues = [];
         if (tutorial.language === 'css') {
@@ -179,15 +181,43 @@ const Learn = () => {
     const handleEditorMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
-        // Initial validation
         validateCode(editor.getValue());
     };
+    
+    // Definitive fix for ResizeObserver loop
+    useEffect(() => {
+        const container = editorContainerRef.current;
+        if (!container) return;
+
+        const handleResize = debounce(() => {
+            window.requestAnimationFrame(() => {
+                const editor = editorRef.current;
+                const currentContainer = editorContainerRef.current;
+                if (editor && currentContainer) {
+                    const newWidth = currentContainer.getBoundingClientRect().width;
+                    // Guard: only layout if size changed significantly
+                    if (Math.abs(newWidth - lastWidthRef.current) > 5) {
+                        editor.layout();
+                        lastWidthRef.current = newWidth;
+                    }
+                }
+            });
+        }, 100);
+
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+            handleResize.cancel();
+        };
+    }, []); // Empty dependency array ensures this runs only once on mount.
+
 
     useEffect(() => {
         const newStep = tutorials[selectedTutorialIndex].steps[currentStepIndex];
         setCode(newStep.code);
         setIsCompleted(false);
-        // Clear markers on step change
         if (editorRef.current && monacoRef.current) {
             monacoRef.current.editor.setModelMarkers(editorRef.current.getModel(), 'baseline-scout', []);
             setTimeout(() => validateCode(newStep.code), 100);
@@ -210,7 +240,6 @@ const Learn = () => {
             </div>
             
             <div className="grid lg:grid-cols-3 gap-8 items-start">
-                {/* Tutorial Sidebar */}
                 <div className="lg:col-span-1 space-y-4">
                      <h2 className="text-xl font-bold">Tutorials</h2>
                     {tutorials.map((tut, index) => (
@@ -222,7 +251,6 @@ const Learn = () => {
                     ))}
                 </div>
 
-                {/* Editor & Instructions */}
                 <div className="lg:col-span-2 bg-light-card dark:bg-dark-card rounded-xl border border-light-border dark:border-dark-border overflow-hidden">
                     <div className="p-6 border-b border-light-border dark:border-dark-border">
                         <h3 className="text-lg font-bold">{step.title}</h3>
@@ -230,7 +258,7 @@ const Learn = () => {
                     </div>
 
                     <div className="grid md:grid-cols-2 h-[500px]">
-                        <div className="h-full w-full relative">
+                        <div ref={editorContainerRef} className="h-full w-full relative min-w-[300px] overflow-hidden">
                              <EditorSettings />
                              <MonacoEditor
                                 height="100%"
@@ -239,10 +267,15 @@ const Learn = () => {
                                 value={code}
                                 onChange={handleEditorChange}
                                 onMount={handleEditorMount}
-                                options={{ minimap: { enabled: false }, fontSize, wordWrap }}
+                                options={{ 
+                                    minimap: { enabled: false }, 
+                                    fontSize, 
+                                    wordWrap,
+                                    automaticLayout: false, // Important: disable automatic layout
+                                }}
                             />
                         </div>
-                        <div className="h-full w-full border-l border-light-border dark:border-dark-border">
+                        <div className="h-full w-full border-l border-light-border dark:border-dark-border min-w-[300px] overflow-hidden">
                             <iframe
                                 srcDoc={previewContent}
                                 title="Live Preview"

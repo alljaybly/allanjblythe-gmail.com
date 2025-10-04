@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useScanStore } from '../store/scanStore';
 import { motion } from 'framer-motion';
@@ -9,12 +8,11 @@ import { ScanResult, ScanIssue, BaselineStatus } from '../types';
 import { WEB_PLATFORM_DASHBOARD_API } from '../constants';
 import { get as getFromCache, set as setInCache } from 'idb-keyval';
 
-declare module 'react' {
-    interface InputHTMLAttributes<T> {
-        webkitdirectory?: string;
-        directory?: string;
-    }
-}
+type StoredFile = {
+    path: string;
+    name: string;
+    content: string;
+};
 
 // In a real app, this would be fetched and cached
 const getFeatureMap = async () => {
@@ -41,7 +39,11 @@ const getFeatureMap = async () => {
     return features;
 };
 
-const runScan = async (files: File[], onProgress: (p: number) => void): Promise<ScanResult> => {
+const runScan = async (
+    files: StoredFile[], 
+    fileContents: Map<string, string>, 
+    onProgress: (p: number) => void
+): Promise<ScanResult> => {
     let allIssues: ScanIssue[] = [];
     const stats: ScanResult['stats'] = {
         [BaselineStatus.Widely]: 0,
@@ -54,15 +56,16 @@ const runScan = async (files: File[], onProgress: (p: number) => void): Promise<
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const text = await file.text();
+        const filePath = file.path;
+        const text = file.content;
         let issues: ScanIssue[] = [];
 
         if (file.name.endsWith('.js') || file.name.endsWith('.jsx') || file.name.endsWith('.ts') || file.name.endsWith('.tsx')) {
-            issues = scanJavaScript(text, file.name, featureMap);
+            issues = scanJavaScript(text, filePath, featureMap);
         } else if (file.name.endsWith('.css')) {
-            issues = scanCss(text, file.name, featureMap);
+            issues = scanCss(text, filePath, featureMap);
         } else if (file.name.endsWith('.html')) {
-            issues = scanHtml(text, file.name, featureMap);
+            issues = scanHtml(text, filePath, featureMap);
         }
         
         issues.forEach(issue => {
@@ -83,32 +86,62 @@ const runScan = async (files: File[], onProgress: (p: number) => void): Promise<
 };
 
 const Scan = () => {
-    const { result, isScanning, progress, setResult, setScanning, setProgress } = useScanStore();
-    const [files, setFiles] = useState<File[]>([]);
+    const { result, isScanning, progress, setResult, setScanning, setProgress, setFileContents } = useScanStore();
+    const [storedFiles, setStoredFiles] = useState<StoredFile[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const handleFileChange = (selectedFiles: FileList | null) => {
-        if (selectedFiles) {
-            const fileArray = Array.from(selectedFiles);
-            const totalSize = fileArray.reduce((acc, file) => acc + file.size, 0);
-            if (totalSize > 20 * 1024 * 1024) { // 20MB limit
-                setError('Total project size cannot exceed 20MB.');
-                return;
-            }
-            setError(null);
-            setFiles(fileArray);
+    const handleFileChange = useCallback(async (selectedFiles: FileList | null) => {
+        if (!selectedFiles) return;
+        
+        const fileArray = Array.from(selectedFiles);
+        const totalSize = fileArray.reduce((acc, file) => acc + file.size, 0);
+        if (totalSize > 20 * 1024 * 1024) { // 20MB limit
+            setError('Total project size cannot exceed 20MB.');
+            return;
         }
-    };
+        
+        setError(null);
+        setIsProcessing(true);
+        setStoredFiles([]);
+
+        try {
+            const filePromises = fileArray.map(async (file) => {
+                const content = await file.text();
+                return {
+                    path: file.webkitRelativePath || file.name,
+                    name: file.name,
+                    content,
+                };
+            });
+
+            const newStoredFiles = await Promise.all(filePromises);
+            setStoredFiles(newStoredFiles);
+        } catch (e) {
+            console.error("Failed to read files:", e);
+            setError("An error occurred while reading your project files. Please try again.");
+            setStoredFiles([]);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, []);
 
     const handleScan = async () => {
-        if (files.length === 0) return;
+        if (storedFiles.length === 0) return;
         setScanning(true);
         setResult(null);
+        setFileContents(null);
         setProgress(0);
         try {
-            const scanResult = await runScan(files, setProgress);
+            const fileContentsMap = new Map<string, string>();
+            for (const file of storedFiles) {
+                fileContentsMap.set(file.path, file.content);
+            }
+
+            const scanResult = await runScan(storedFiles, fileContentsMap, setProgress);
             setResult(scanResult);
+            setFileContents(fileContentsMap);
         } catch (e) {
             console.error("Scan failed:", e);
             setError("An unexpected error occurred during the scan.");
@@ -128,21 +161,25 @@ const Scan = () => {
         setIsDragging(false);
     }, []);
 
-    const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const onDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileChange(e.dataTransfer.files);
+            await handleFileChange(e.dataTransfer.files);
         }
-    }, []);
+    }, [handleFileChange]);
 
     if (result) {
         return (
             <div>
                 <ScanResultDashboard result={result} />
                 <button
-                    onClick={() => { setResult(null); setFiles([]); }}
+                    onClick={() => { 
+                        setResult(null); 
+                        setFileContents(null);
+                        setStoredFiles([]); 
+                    }}
                     className="mt-8 px-6 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity"
                 >
                     Scan Another Project
@@ -185,19 +222,24 @@ const Scan = () => {
                 </p>
             </div>
             
+            {isProcessing && (
+                 <div className="mt-4">
+                    <p className="text-slate-500 dark:text-slate-400">Processing project files...</p>
+                </div>
+            )}
             {error && <p className="text-red-500 mt-4">{error}</p>}
 
-            {files.length > 0 && (
+            {storedFiles.length > 0 && (
                 <div className="mt-8 text-left">
-                    <h3 className="font-semibold mb-2">Selected Files ({files.length}):</h3>
+                    <h3 className="font-semibold mb-2">Selected Files ({storedFiles.length}):</h3>
                     <ul className="max-h-48 overflow-y-auto space-y-1 bg-light-bg dark:bg-dark-bg p-3 rounded-md border border-light-border dark:border-dark-border">
-                        {files.map((file, index) => (
+                        {storedFiles.map((file, index) => (
                             <li key={index} className="flex items-center justify-between text-sm">
                                 <span className="flex items-center gap-2">
                                     <FileText size={14} className="text-slate-500" />
-                                    {file.webkitRelativePath || file.name}
+                                    {file.path}
                                 </span>
-                                <button onClick={() => setFiles(files.filter(f => f.name !== file.name))}>
+                                <button onClick={() => setStoredFiles(prev => prev.filter(f => f.path !== file.path))}>
                                     <X size={14} className="text-red-500" />
                                 </button>
                             </li>
@@ -222,10 +264,10 @@ const Scan = () => {
 
             <button
                 onClick={handleScan}
-                disabled={files.length === 0 || isScanning}
+                disabled={storedFiles.length === 0 || isScanning || isProcessing}
                 className="mt-8 px-8 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
-                {isScanning ? 'Scanning...' : 'Start Scan'}
+                {isScanning ? 'Scanning...' : isProcessing ? 'Processing...' : 'Start Scan'}
             </button>
         </div>
     );

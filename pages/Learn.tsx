@@ -1,10 +1,9 @@
-// FIX: Import `useMemo` from react to resolve 'Cannot find name' error.
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import MonacoEditor, { OnMount } from '@monaco-editor/react';
 import { useThemeStore } from '../store/themeStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { Check, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Settings, Search } from 'lucide-react';
 import { scanCss, scanHtml, scanJavaScript } from '../services/codeScanner';
 import { useDashboardAPI } from '../hooks/useDashboardAPI';
 import { DashboardFeature, BaselineStatus } from '../types';
@@ -107,6 +106,7 @@ const Learn = () => {
     const [selectedTutorialIndex, setSelectedTutorialIndex] = useState(0);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const { data: featureMap } = useDashboardAPI('/features?limit=2000');
+    const [searchTerm, setSearchTerm] = useState('');
     
     const tutorial = tutorials[selectedTutorialIndex];
     const step = tutorial.steps[currentStepIndex];
@@ -116,6 +116,35 @@ const Learn = () => {
     
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<any>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
+    const lastSize = useRef({ width: 0, height: 0 });
+
+    const filteredTutorials = useMemo(() => {
+        if (!searchTerm) {
+            return tutorials;
+        }
+        return tutorials.filter(tut =>
+            tut.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tut.featureId.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm]);
+
+    // Effect to adjust selection if the current tutorial is filtered out
+    useEffect(() => {
+        if (filteredTutorials.length > 0) {
+            const currentTutorial = tutorials[selectedTutorialIndex];
+            const isSelectedVisible = filteredTutorials.some(t => t.featureId === currentTutorial.featureId);
+
+            if (!isSelectedVisible) {
+                const firstFilteredInOriginalIndex = tutorials.findIndex(t => t.featureId === filteredTutorials[0].featureId);
+                if (firstFilteredInOriginalIndex !== -1) {
+                    setSelectedTutorialIndex(firstFilteredInOriginalIndex);
+                    setCurrentStepIndex(0);
+                }
+            }
+        }
+    }, [searchTerm, filteredTutorials, selectedTutorialIndex]);
+
 
     const constructPreview = (htmlCode: string, cssCode: string, jsCode: string) => {
         return `
@@ -142,7 +171,7 @@ const Learn = () => {
     }, [code, tutorial.language]);
 
     const validateCode = useCallback((currentCode: string) => {
-        if (!featureMap || !editorRef.current || !monacoRef.current) return;
+        if (!Array.isArray(featureMap) || !editorRef.current || !monacoRef.current) return;
         
         let issues = [];
         if (tutorial.language === 'css') {
@@ -169,19 +198,27 @@ const Learn = () => {
 
     const debouncedValidate = useCallback(debounce(validateCode, 500), [validateCode]);
 
-    const handleEditorChange = (value?: string) => {
+    const handleEditorChange = useCallback((value?: string) => {
         const newCode = value || '';
         setCode(newCode);
         setIsCompleted(step.validate(newCode));
         debouncedValidate(newCode);
-    };
+    }, [step, debouncedValidate]);
 
-    const handleEditorMount: OnMount = (editor, monaco) => {
+    const handleEditorMount: OnMount = useCallback((editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        console.info('Monaco web workers might be disabled in this environment; falling back to main thread.');
         // Initial validation
         validateCode(editor.getValue());
-    };
+    }, [validateCode]);
+    
+    const editorOptions = useMemo(() => ({
+        minimap: { enabled: false },
+        fontSize,
+        wordWrap,
+        automaticLayout: false, // CRITICAL: Disable automatic layout to prevent loops
+    }), [fontSize, wordWrap]);
 
     useEffect(() => {
         const newStep = tutorials[selectedTutorialIndex].steps[currentStepIndex];
@@ -193,6 +230,36 @@ const Learn = () => {
             setTimeout(() => validateCode(newStep.code), 100);
         }
     }, [selectedTutorialIndex, currentStepIndex, validateCode]);
+
+    // Definitive fix for ResizeObserver loop error
+    useEffect(() => {
+        const editor = editorRef.current;
+        const container = editorContainerRef.current;
+        if (!editor || !container) return;
+
+        const handleResize = debounce(() => {
+            const { width, height } = container.getBoundingClientRect();
+            // Size guard: only layout if size changed significantly (>5px)
+            if (Math.abs(width - lastSize.current.width) > 5 || Math.abs(height - lastSize.current.height) > 5) {
+                lastSize.current = { width, height };
+                // Defer layout call to next event loop tick to break the cycle
+                setTimeout(() => {
+                    editor.layout();
+                }, 0);
+            }
+        }, 150);
+
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(container);
+        
+        // Initial layout call
+        handleResize();
+
+        return () => {
+            resizeObserver.disconnect();
+            handleResize.cancel();
+        };
+    }, []); // Empty dependency array ensures this runs only once on mount.
     
     const goToStep = (index: number) => {
         if(index >= 0 && index < tutorial.steps.length) {
@@ -213,13 +280,35 @@ const Learn = () => {
                 {/* Tutorial Sidebar */}
                 <div className="lg:col-span-1 space-y-4">
                      <h2 className="text-xl font-bold">Tutorials</h2>
-                    {tutorials.map((tut, index) => (
-                        <button key={tut.featureId} onClick={() => { setSelectedTutorialIndex(index); setCurrentStepIndex(0); }}
-                         className={`w-full text-left p-4 rounded-lg border transition-colors ${selectedTutorialIndex === index ? 'bg-cosmic-blue/10 border-cosmic-blue ring-2 ring-cosmic-blue' : 'bg-light-card dark:bg-dark-card border-light-border dark:border-dark-border hover:border-cosmic-blue/50'}`}
-                        >
-                            <h3 className="font-semibold">{tut.title}</h3>
-                        </button>
-                    ))}
+                     <div className="relative">
+                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                            type="text"
+                            placeholder="Search tutorials..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border focus:ring-2 focus:ring-cosmic-blue focus:outline-none"
+                        />
+                    </div>
+                    
+                    {filteredTutorials.length > 0 ? (
+                        filteredTutorials.map((tut) => {
+                            const originalIndex = tutorials.findIndex(t => t.featureId === tut.featureId);
+                            return (
+                                <button
+                                    key={tut.featureId}
+                                    onClick={() => { setSelectedTutorialIndex(originalIndex); setCurrentStepIndex(0); }}
+                                    className={`w-full text-left p-4 rounded-lg border transition-colors ${selectedTutorialIndex === originalIndex ? 'bg-cosmic-blue/10 border-cosmic-blue ring-2 ring-cosmic-blue' : 'bg-light-card dark:bg-dark-card border-light-border dark:border-dark-border hover:border-cosmic-blue/50'}`}
+                                >
+                                    <h3 className="font-semibold">{tut.title}</h3>
+                                </button>
+                            );
+                        })
+                    ) : (
+                         <div className="text-center p-4 text-slate-500 dark:text-slate-400 bg-light-card dark:bg-dark-card rounded-lg border border-light-border dark:border-dark-border">
+                            <p>No tutorials found for "{searchTerm}".</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Editor & Instructions */}
@@ -230,7 +319,7 @@ const Learn = () => {
                     </div>
 
                     <div className="grid md:grid-cols-2 h-[500px]">
-                        <div className="h-full w-full relative">
+                        <div ref={editorContainerRef} className="h-full w-[99%] relative min-w-[300px] overflow-hidden">
                              <EditorSettings />
                              <MonacoEditor
                                 height="100%"
@@ -239,10 +328,10 @@ const Learn = () => {
                                 value={code}
                                 onChange={handleEditorChange}
                                 onMount={handleEditorMount}
-                                options={{ minimap: { enabled: false }, fontSize, wordWrap }}
+                                options={editorOptions}
                             />
                         </div>
-                        <div className="h-full w-full border-l border-light-border dark:border-dark-border">
+                        <div className="h-full w-[99%] border-l border-light-border dark:border-dark-border">
                             <iframe
                                 srcDoc={previewContent}
                                 title="Live Preview"

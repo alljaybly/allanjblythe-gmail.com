@@ -1,11 +1,11 @@
-
 import * as babelParser from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as cssTree from 'css-tree';
 import * as htmlparser2 from 'htmlparser2';
 import { ScanIssue, BaselineStatus, DashboardFeature } from '../types';
 
-const mapApiStatusToBaselineStatus = (feature?: DashboardFeature): BaselineStatus => {
+// FIX: Export mapApiStatusToBaselineStatus to be used in other components.
+export const mapApiStatusToBaselineStatus = (feature?: DashboardFeature): BaselineStatus => {
   if (!feature) return BaselineStatus.Unknown;
   switch (feature.baseline?.status) {
     case 'wide': return BaselineStatus.Widely;
@@ -87,7 +87,9 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
 
     const parser = new htmlparser2.Parser({
         onopentag(name, attribs) {
-            const loc = (parser as any).getLocation();
+            // FIX: Use parser.line and parser.column instead of the removed getLocation() method.
+            const line = parser.line;
+            const col = parser.column;
             // Check for tags
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
@@ -96,8 +98,8 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
                     featureId: tagFeature.identifier,
                     name: tagFeature.name,
                     status: mapApiStatusToBaselineStatus(tagFeature),
-                    line: loc.line,
-                    column: loc.col,
+                    line: line,
+                    column: col,
                 });
             }
             // Check for attributes
@@ -109,8 +111,8 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
                         featureId: attrFeature.identifier,
                         name: attrFeature.name,
                         status: mapApiStatusToBaselineStatus(attrFeature),
-                        line: loc.line,
-                        column: loc.col,
+                        line: line,
+                        column: col,
                      });
                  }
             }
