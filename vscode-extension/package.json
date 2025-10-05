@@ -41,6 +41,7 @@
   "dependencies": {
     "@babel/parser": "^7.25.3",
     "@babel/traverse": "^7.25.0",
+    "@babel/types": "^7.25.4",
     "css-tree": "^2.3.1",
     "htmlparser2": "^9.1.0",
     "node-fetch": "^2.7.0"

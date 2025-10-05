@@ -1,5 +1,6 @@
 import * as babelParser from '@babel/parser';
-import traverse from '@babel/traverse';
+import traverse, { NodePath } from '@babel/traverse';
+import * as t from '@babel/types';
 import * as cssTree from 'css-tree';
 import { Parser } from 'htmlparser2';
 import { ScanIssue, BaselineStatus, DashboardFeature, Priority } from '../types';
@@ -40,13 +41,18 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
       errorRecovery: true,
     });
 
-    traverse(ast, {
-      // By using a specific visitor for 'Identifier', the 'path' argument is automatically
-      // typed as NodePath<Identifier>. This is safer and more efficient than a generic 'enter' visitor,
-      // resolving type errors where properties like '.loc' might not exist on a generic node.
-      Identifier(path) {
-        if (path.node.name === 'structuredClone' && path.node.loc) {
-          const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
+    const visitor = {
+      Identifier(path: NodePath<t.Identifier>) {
+        const featureChecks: { [key: string]: string } = {
+          'structuredClone': 'structuredClone',
+          'fetch': 'api-fetch',
+          'Promise': 'api-promise',
+        };
+        
+        const featureIdPart = featureChecks[path.node.name];
+
+        if (featureIdPart && path.node.loc) {
+          const feature = jsFeatures.find(f => f.identifier.includes(featureIdPart));
           if (feature) {
             const status = mapApiStatusToBaselineStatus(feature);
             issues.push({
@@ -60,9 +66,11 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
             });
           }
         }
-        // Add more sophisticated checks here for other JS features based on AST node types
-      },
-    });
+      }
+    };
+
+    traverse(ast, visitor);
+
   } catch (error) {
     console.error(`Failed to parse JS in ${filename}:`, error);
   }

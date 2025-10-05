@@ -1,5 +1,6 @@
 import * as babelParser from '@babel/parser';
-import traverse from '@babel/traverse';
+import traverse, { NodePath } from '@babel/traverse';
+import * as t from '@babel/types';
 import * as cssTree from 'css-tree';
 import { Parser } from 'htmlparser2';
 import { ScanIssue, BaselineStatus, DashboardFeature, Priority } from './types';
@@ -36,10 +37,18 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
             errorRecovery: true,
         });
 
-        traverse(ast, {
-            Identifier(path) {
-                if (path.node.name === 'structuredClone' && path.node.loc) {
-                    const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
+        const visitor = {
+            Identifier(path: NodePath<t.Identifier>) {
+                const featureChecks: { [key: string]: string } = {
+                  'structuredClone': 'structuredClone',
+                  'fetch': 'api-fetch',
+                  'Promise': 'api-promise',
+                };
+                
+                const featureIdPart = featureChecks[path.node.name];
+
+                if (featureIdPart && path.node.loc) {
+                    const feature = jsFeatures.find(f => f.identifier.includes(featureIdPart));
                     if (feature) {
                         const status = mapApiStatusToBaselineStatus(feature);
                         issues.push({
@@ -53,8 +62,11 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
                         });
                     }
                 }
-            },
-        });
+            }
+        };
+
+        traverse(ast, visitor);
+
     } catch (error) {
         console.error(`Failed to parse JS in ${filename}:`, error);
     }
@@ -98,8 +110,10 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
 
     const parser = new Parser({
         onopentag(name, attribs) {
-            const line = (parser as any).line;
-            const col = (parser as any).column;
+            const loc = (parser as any).getLocation();
+            const line = loc ? loc.line : 0;
+            const col = loc ? loc.col : 0;
+            
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
                 const status = mapApiStatusToBaselineStatus(tagFeature);
