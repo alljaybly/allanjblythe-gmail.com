@@ -38,7 +38,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^15.0.7",
-    "@types/babel__traverse": "^7.20.6",
+    "@types/babel__traverse": "^7.24.5",
     "@types/css-tree": "^2.3.2",
     "@types/htmlparser2": "^3.10.7",
     "@types/js-yaml": "^4.0.9",

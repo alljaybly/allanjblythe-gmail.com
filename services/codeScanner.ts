@@ -114,10 +114,12 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
 
     const parser = new Parser({
         onopentag(name, attribs) {
-            // Unsafe type cast is necessary here because the '@types/htmlparser2' package
-            // does not correctly expose the 'line' and 'column' properties on the Parser instance.
-            const line = (parser as any).line;
-            const col = (parser as any).column;
+            // Unsafe type cast to 'any' is necessary because '@types/htmlparser2' is outdated
+            // and does not include the `getLocation` method or `withLocations` option.
+            const loc = (parser as any).getLocation();
+            const line = loc ? loc.line : 0;
+            const col = loc ? loc.col : 0;
+            
             // Check for tags
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
@@ -149,9 +151,9 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
                  }
             }
         }
-    // Unsafe type cast is necessary as '@types/htmlparser2' is outdated and does not include
-    // modern parser options like 'withStartIndices', causing a TS2353 error otherwise.
-    }, { xmlMode: false, recognizeSelfClosing: true, withStartIndices: true, withEndIndices: true } as any);
+    // The options object is cast to 'any' to allow 'withLocations', which is a valid
+    // option in htmlparser2 v9 but is missing from the outdated type definitions.
+    }, { xmlMode: false, recognizeSelfClosing: true, withStartIndices: true, withEndIndices: true, withLocations: true } as any);
 
     try {
       parser.write(code);
