@@ -37,35 +37,36 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
             errorRecovery: true,
         });
 
-        const visitor = {
-            Identifier(path: NodePath<t.Identifier>) {
-                const featureChecks: { [key: string]: string } = {
-                  'structuredClone': 'structuredClone',
-                  'fetch': 'api-fetch',
-                  'Promise': 'api-promise',
-                };
-                
-                const featureIdPart = featureChecks[path.node.name];
+        traverse(ast, {
+            enter(path: NodePath<t.Node>) {
+                if (path.isIdentifier()) {
+                    const node = path.node;
+                    const featureChecks: { [key: string]: string } = {
+                        'structuredClone': 'structuredClone',
+                        'fetch': 'api-fetch',
+                        'Promise': 'api-promise',
+                    };
 
-                if (featureIdPart && path.node.loc) {
-                    const feature = jsFeatures.find(f => f.identifier.includes(featureIdPart));
-                    if (feature) {
-                        const status = mapApiStatusToBaselineStatus(feature);
-                        issues.push({
-                            file: filename,
-                            featureId: feature.identifier,
-                            name: feature.name,
-                            status: status,
-                            priority: mapStatusToPriority(status),
-                            line: path.node.loc.start.line,
-                            column: path.node.loc.start.column,
-                        });
+                    const featureIdPart = featureChecks[node.name];
+
+                    if (featureIdPart && node.loc) {
+                        const feature = jsFeatures.find(f => f.identifier.includes(featureIdPart));
+                        if (feature) {
+                            const status = mapApiStatusToBaselineStatus(feature);
+                            issues.push({
+                                file: filename,
+                                featureId: feature.identifier,
+                                name: feature.name,
+                                status: status,
+                                priority: mapStatusToPriority(status),
+                                line: node.loc.start.line,
+                                column: node.loc.start.column,
+                            });
+                        }
                     }
                 }
             }
-        };
-
-        traverse(ast, visitor);
+        });
 
     } catch (error) {
         console.error(`Failed to parse JS in ${filename}:`, error);
