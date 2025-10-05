@@ -78,12 +78,48 @@ const StatCard = ({ status, count, icon }: { status: BaselineStatus, count: numb
     );
 };
 
+const CodeSnippetView: React.FC<{ issue: ScanIssue, fileContents: Map<string, string> | null }> = ({ issue, fileContents }) => {
+    const content = fileContents?.get(issue.file);
+    if (!content) {
+        return <div className="p-4 text-xs text-slate-500">Could not load code snippet.</div>;
+    }
+
+    const lines = content.split('\n');
+    const issueLineIndex = issue.line - 1;
+    const startLine = Math.max(0, issueLineIndex - 2);
+    const endLine = Math.min(lines.length - 1, issueLineIndex + 2);
+
+    const snippetLines = lines.slice(startLine, endLine + 1);
+
+    return (
+        <div className="bg-dark-card p-4">
+            <pre className="text-xs text-slate-300 overflow-x-auto">
+                {snippetLines.map((line, index) => {
+                    const currentLineNumber = startLine + index + 1;
+                    const isIssueLine = currentLineNumber === issue.line;
+                    return (
+                        <div key={index} className={`flex ${isIssueLine ? 'bg-cosmic-orange/10' : ''}`}>
+                            <span className={`w-12 inline-block text-right pr-4 ${isIssueLine ? 'text-cosmic-orange' : 'text-slate-500'}`}>
+                                {currentLineNumber}
+                            </span>
+                            <code className="whitespace-pre">{line}</code>
+                        </div>
+                    );
+                })}
+            </pre>
+        </div>
+    );
+};
+
 
 const IssuesTable = ({ issuesWithIndex, fileContents, onPriorityChange }: { issuesWithIndex: {issue: ScanIssue, originalIndex: number}[], fileContents: Map<string, string> | null, onPriorityChange: (index: number, priority: Priority) => void }) => {
     const [openFile, setOpenFile] = useState<string | null>(null);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const [expandedIssueKey, setExpandedIssueKey] = useState<string | null>(null);
 
-    const handleCopy = async (issue: ScanIssue, index: number) => {
+
+    const handleCopy = async (e: React.MouseEvent, issue: ScanIssue) => {
+        e.stopPropagation(); // Prevent row from expanding
         if (!fileContents) return;
         const content = fileContents.get(issue.file);
         if (!content) return;
@@ -94,7 +130,7 @@ const IssuesTable = ({ issuesWithIndex, fileContents, onPriorityChange }: { issu
 
         try {
             await navigator.clipboard.writeText(codeSnippet.trim());
-            const key = `${issue.file}-${issue.line}-${index}`;
+            const key = `${issue.file}-${issue.line}`;
             setCopiedKey(key);
             setTimeout(() => setCopiedKey(null), 2000);
         } catch (err) {
@@ -156,6 +192,7 @@ const IssuesTable = ({ issuesWithIndex, fileContents, onPriorityChange }: { issu
                                 <table className="w-full text-sm text-left">
                                     <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-dark-card">
                                         <tr>
+                                            <th scope="col" className="w-12 px-4 py-3"></th>
                                             <th scope="col" className="px-6 py-3">Line</th>
                                             <th scope="col" className="px-6 py-3">Feature</th>
                                             <th scope="col" className="px-6 py-3">Status</th>
@@ -166,41 +203,69 @@ const IssuesTable = ({ issuesWithIndex, fileContents, onPriorityChange }: { issu
                                     <tbody>
                                         {fileIssues.map(({issue, originalIndex}) => {
                                             const key = `${originalIndex}`;
+                                            const isExpanded = expandedIssueKey === key;
                                             return (
-                                            <tr key={key} className="border-b last:border-b-0 border-light-border dark:border-dark-border">
-                                                <td className="px-6 py-4 font-mono">{issue.line}:{issue.column}</td>
-                                                <td className="px-6 py-4 font-semibold">{issue.name}</td>
-                                                <td className="px-6 py-4"><FeatureBadge status={issue.status} /></td>
-                                                <td className="px-6 py-4">
-                                                   <select
-                                                        value={issue.priority}
-                                                        onChange={(e) => onPriorityChange(originalIndex, e.target.value as Priority)}
-                                                        className={`rounded-full py-1 px-3 border text-xs font-medium appearance-none focus:outline-none focus:ring-2 ${priorityClasses[issue.priority]}`}
-                                                    >
-                                                        <option value={Priority.High}>High</option>
-                                                        <option value={Priority.Medium}>Medium</option>
-                                                        <option value={Priority.Low}>Low</option>
-                                                    </select>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Tooltip content="Copy code snippet" position="left">
-                                                      <button
-                                                          onClick={() => handleCopy(issue, originalIndex)}
-                                                          className="flex items-center gap-2 text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-dark-border hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
-                                                      >
-                                                          {copiedKey === key ? (
-                                                              <>
-                                                                  <ClipboardCheck size={14} className="text-green-500" /> Copied!
-                                                              </>
-                                                          ) : (
-                                                               <>
-                                                                  <ClipboardCopy size={14} /> Copy
-                                                              </>
-                                                          )}
-                                                      </button>
-                                                    </Tooltip>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={key}>
+                                                <tr 
+                                                    className="border-b last:border-b-0 border-light-border dark:border-dark-border cursor-pointer hover:bg-slate-200/50 dark:hover:bg-dark-border/50"
+                                                    onClick={() => setExpandedIssueKey(isExpanded ? null : key)}
+                                                >
+                                                    <td className="px-4 py-4 text-slate-400">
+                                                        <ChevronDown size={16} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                    </td>
+                                                    <td className="px-6 py-4 font-mono">{issue.line}:{issue.column}</td>
+                                                    <td className="px-6 py-4 font-semibold">{issue.name}</td>
+                                                    <td className="px-6 py-4"><FeatureBadge status={issue.status} /></td>
+                                                    <td className="px-6 py-4">
+                                                       <select
+                                                            value={issue.priority}
+                                                            onClick={(e) => e.stopPropagation()} // Prevent row click
+                                                            onChange={(e) => onPriorityChange(originalIndex, e.target.value as Priority)}
+                                                            className={`rounded-full py-1 px-3 border text-xs font-medium appearance-none focus:outline-none focus:ring-2 ${priorityClasses[issue.priority]}`}
+                                                        >
+                                                            <option value={Priority.High}>High</option>
+                                                            <option value={Priority.Medium}>Medium</option>
+                                                            <option value={Priority.Low}>Low</option>
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <Tooltip content="Copy code snippet" position="left">
+                                                          <button
+                                                              onClick={(e) => handleCopy(e, issue)}
+                                                              className="flex items-center gap-2 text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-dark-border hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                                                          >
+                                                              {copiedKey === `${issue.file}-${issue.line}` ? (
+                                                                  <>
+                                                                      <ClipboardCheck size={14} className="text-green-500" /> Copied!
+                                                                  </>
+                                                              ) : (
+                                                                   <>
+                                                                      <ClipboardCopy size={14} /> Copy
+                                                                  </>
+                                                              )}
+                                                          </button>
+                                                        </Tooltip>
+                                                    </td>
+                                                </tr>
+                                                <AnimatePresence>
+                                                {isExpanded && (
+                                                    <tr>
+                                                        <td colSpan={6} className="p-0 border-b border-light-border dark:border-dark-border">
+                                                            <MotionDiv
+                                                                key="content"
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <CodeSnippetView issue={issue} fileContents={fileContents} />
+                                                            </MotionDiv>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                </AnimatePresence>
+                                            </React.Fragment>
                                         )})}
                                     </tbody>
                                 </table>
