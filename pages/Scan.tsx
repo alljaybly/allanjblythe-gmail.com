@@ -7,6 +7,7 @@ import { scanJavaScript, scanCss, scanHtml } from '../services/codeScanner';
 import { ScanResult, ScanIssue, BaselineStatus } from '../types';
 import { WEB_PLATFORM_DASHBOARD_API } from '../constants';
 import { get as getFromCache, set as setInCache } from 'idb-keyval';
+import Tooltip from '../components/Tooltip';
 
 type StoredFile = {
     path: string;
@@ -84,6 +85,9 @@ const runScan = async (
         issues: allIssues.sort((a,b) => a.file.localeCompare(b.file)),
     };
 };
+
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
 
 const Scan = () => {
     const { result, isScanning, progress, setResult, setScanning, setProgress, setFileContents } = useScanStore();
@@ -174,16 +178,18 @@ const Scan = () => {
         return (
             <div>
                 <ScanResultDashboard result={result} />
-                <button
-                    onClick={() => { 
-                        setResult(null); 
-                        setFileContents(null);
-                        setStoredFiles([]); 
-                    }}
-                    className="mt-8 px-6 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity"
-                >
-                    Scan Another Project
-                </button>
+                <Tooltip content="Clear results and start a new scan">
+                  <button
+                      onClick={() => { 
+                          setResult(null); 
+                          setFileContents(null);
+                          setStoredFiles([]); 
+                      }}
+                      className="mt-8 px-6 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity"
+                  >
+                      Scan Another Project
+                  </button>
+                </Tooltip>
             </div>
         );
     }
@@ -214,9 +220,11 @@ const Scan = () => {
                     className="hidden"
                     onChange={(e) => handleFileChange(e.target.files)}
                 />
-                <label htmlFor="file-upload" className="cursor-pointer text-cosmic-blue font-semibold hover:underline">
-                    select a folder
-                </label>
+                <Tooltip content="Select your project folder to scan" position="bottom">
+                  <label htmlFor="file-upload" className="cursor-pointer text-cosmic-blue font-semibold hover:underline">
+                      select a folder
+                  </label>
+                </Tooltip>
                 <p className="text-xs text-slate-400 mt-4">
                     Max 20MB. All processing is done on your device. Your code never leaves your browser.
                 </p>
@@ -239,9 +247,11 @@ const Scan = () => {
                                     <FileText size={14} className="text-slate-500" />
                                     {file.path}
                                 </span>
-                                <button onClick={() => setStoredFiles(prev => prev.filter(f => f.path !== file.path))}>
-                                    <X size={14} className="text-red-500" />
-                                </button>
+                                <Tooltip content="Remove this file" position="left">
+                                  <button onClick={() => setStoredFiles(prev => prev.filter(f => f.path !== file.path))}>
+                                      <X size={14} className="text-red-500" />
+                                  </button>
+                                </Tooltip>
                             </li>
                         ))}
                     </ul>
@@ -252,7 +262,7 @@ const Scan = () => {
                 <div className="mt-8">
                     <p>Scanning... {progress}%</p>
                     <div className="w-full bg-slate-200 dark:bg-dark-border rounded-full h-2.5 mt-2">
-                        <motion.div
+                        <MotionDiv
                             className="bg-cosmic-blue h-2.5 rounded-full"
                             style={{ width: `${progress}%` }}
                             transition={{ ease: "linear" }}
@@ -261,14 +271,15 @@ const Scan = () => {
                 </div>
             )}
 
-
-            <button
-                onClick={handleScan}
-                disabled={storedFiles.length === 0 || isScanning || isProcessing}
-                className="mt-8 px-8 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-            >
-                {isScanning ? 'Scanning...' : isProcessing ? 'Processing...' : 'Start Scan'}
-            </button>
+            <Tooltip content={storedFiles.length === 0 ? 'Please select a project folder first' : 'Begin scanning the selected files'}>
+              <button
+                  onClick={handleScan}
+                  disabled={storedFiles.length === 0 || isScanning || isProcessing}
+                  className="mt-8 px-8 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+              >
+                  {isScanning ? 'Scanning...' : isProcessing ? 'Processing...' : 'Start Scan'}
+              </button>
+            </Tooltip>
         </div>
     );
 };

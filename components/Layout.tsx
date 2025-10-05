@@ -6,6 +6,10 @@ import { motion } from 'framer-motion';
 import { Code, Github, Moon, Sun, Menu, X } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { NAV_LINKS } from '../constants';
+import Tooltip from './Tooltip';
+
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
 
 const Header = () => {
   const { theme, toggleTheme } = useThemeStore();
@@ -48,13 +52,15 @@ const Header = () => {
             </div>
           </div>
           <div className="flex items-center">
-             <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-card transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            <Tooltip content="Toggle theme" position="bottom">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-card transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            </Tooltip>
             <div className="md:hidden ml-2">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -67,7 +73,7 @@ const Header = () => {
         </div>
       </div>
       {isMenuOpen && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           className="md:hidden"
@@ -75,7 +81,7 @@ const Header = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col">
             <NavLinks />
           </div>
-        </motion.div>
+        </MotionDiv>
       )}
     </header>
   );
@@ -88,15 +94,17 @@ const Footer = () => (
       <p className="mt-1">
         A hackathon project for the Google/Devpost Baseline Tooling Hackathon.
       </p>
-      <a
-        href="https://github.com/alljaybly/allanjblythe-gmail.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 mt-2 hover:text-cosmic-blue"
-      >
-        <Github size={16} />
-        View on GitHub
-      </a>
+      <Tooltip content="View source code on GitHub">
+        <a
+          href="https://github.com/alljaybly/allanjblythe-gmail.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-2 hover:text-cosmic-blue"
+        >
+          <Github size={16} />
+          View on GitHub
+        </a>
+      </Tooltip>
     </div>
   </footer>
 );

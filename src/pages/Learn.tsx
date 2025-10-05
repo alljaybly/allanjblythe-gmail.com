@@ -1,314 +1,94 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+// FIX: Replaced corrupted file content with the correct component code.
+import React from 'react';
 import { motion } from 'framer-motion';
-import MonacoEditor, { OnMount } from '@monaco-editor/react';
-import { useThemeStore } from '../store/themeStore';
-import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { Check, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
-import { scanCss, scanHtml, scanJavaScript } from '../services/codeScanner';
-import { useDashboardAPI } from '../hooks/useDashboardAPI';
-import { BaselineStatus } from '../types';
-import { editor } from 'monaco-editor';
-import { debounce } from 'lodash-es';
+import { BookOpen, CheckCircle, Code } from 'lucide-react';
 
+const MotionDiv = motion.div;
 
-const tutorials = [
-  {
-    title: 'CSS Nesting',
-    featureId: 'css-nesting',
-    language: 'css',
-    steps: [
-      {
-        title: 'Basic Nesting',
-        description: 'Nest selectors to create more readable and modular CSS. Try nesting the `p` tag inside the `.card` selector.',
-        code: `/* Style this card */\n\n.card {\n  background: lightblue;\n  padding: 1rem;\n\n  p {\n    color: darkblue;\n  }\n}`,
-        validate: (code: string) => /\\.card\\s*{[^}]*p\\s*{/s.test(code),
-      },
-      {
-        title: 'The `&` Selector',
-        description: 'The `&` selector refers to the parent selector. Use it to style pseudo-classes like `:hover`.',
-        code: `.card {\n  background: lightblue;\n  padding: 1rem;\n  transition: transform 0.2s;\n\n  &:hover {\n    transform: scale(1.05);\n  }\n}`,
-        validate: (code: string) => code.includes('&:hover'),
-      }
-    ]
-  },
-  {
-    title: 'Popover API',
-    featureId: 'popover',
-    language: 'html',
-    steps: [
-        {
-            title: 'Creating a Popover',
-            description: 'The `popover` attribute turns any element into a popover. Add the `popover` attribute to the `div`.',
-            code: `<button popovertarget="my-popover">Toggle Popover</button>\n\n<div id="my-popover">\n  I am a popover!\n</div>\n\n<style>\n  [popover] { margin: auto; }\n</style>`,
-            validate: (code: string) => /<div[^>]+popover/i.test(code),
-        },
-        {
-            title: 'Styling with `:popover-open`',
-            description: 'Use the `:popover-open` pseudo-class to style a popover when it is visible.',
-            code: `<style>\n  [popover] {\n    border: 2px solid #0A84FF;\n    border-radius: 8px;\n  }\n  [popover]:popover-open {\n    box-shadow: 0 4px 12px rgba(0,0,0,0.15);\n  }\n</style>\n\n<button popovertarget="my-popover">Toggle Popover</button>\n<div id="my-popover" popover>I am a popover!</div>`,
-            validate: (code: string) => code.includes(':popover-open'),
-        }
-    ]
-  }
-];
-
-const EditorSettings = () => {
-    const { fontSize, wordWrap, syncTheme, setFontSize, setWordWrap, toggleSyncTheme } = useEditorSettingsStore();
-    const [showSettings, setShowSettings] = useState(false);
-
-    return (
-        <div className="absolute top-2 right-2 z-20">
-            <button
-                onClick={() => setShowSettings(prev => !prev)}
-                className="p-2 rounded-full bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-sm hover:bg-slate-200 dark:hover:bg-dark-border"
-                aria-label="Editor Settings"
-            >
-                <Settings size={18} />
-            </button>
-            {showSettings && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-full right-0 mt-2 w-64 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-xl p-4 space-y-4"
-                >
-                    <div className="flex items-center justify-between">
-                        <label htmlFor="font-size" className="text-sm font-medium">Font Size</label>
-                        <input
-                            type="number"
-                            id="font-size"
-                            value={fontSize}
-                            onChange={(e) => setFontSize(Number(e.target.value))}
-                            className="w-20 p-1 text-center rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border"
-                        />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Word Wrap</label>
-                        <button onClick={() => setWordWrap(wordWrap === 'on' ? 'off' : 'on')} className={`px-3 py-1 text-sm rounded-full transition-colors ${wordWrap === 'on' ? 'bg-cosmic-blue text-white' : 'bg-slate-200 dark:bg-dark-border'}`}>
-                            {wordWrap === 'on' ? 'On' : 'Off'}
-                        </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Sync App Theme</label>
-                        <button onClick={toggleSyncTheme} className={`px-3 py-1 text-sm rounded-full transition-colors ${syncTheme ? 'bg-cosmic-blue text-white' : 'bg-slate-200 dark:bg-dark-border'}`}>
-                            {syncTheme ? 'On' : 'Off'}
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+const LearnCard = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
+    <MotionDiv
+        className="bg-light-card dark:bg-dark-card p-6 rounded-xl border border-light-border dark:border-dark-border"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ duration: 0.5 }}
+    >
+        <div className="flex items-center gap-4 mb-4">
+            <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-cosmic-blue/10 text-cosmic-blue">
+                {icon}
+            </div>
+            <h3 className="text-xl font-bold">{title}</h3>
         </div>
-    );
-};
-
+        <div className="text-slate-600 dark:text-slate-300 space-y-2">
+            {children}
+        </div>
+    </MotionDiv>
+);
 
 const Learn = () => {
-    const { theme } = useThemeStore();
-    const { fontSize, wordWrap, syncTheme } = useEditorSettingsStore();
-    const [selectedTutorialIndex, setSelectedTutorialIndex] = useState(0);
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
-    const { data: featureMap } = useDashboardAPI('/features?limit=2000');
-    
-    const tutorial = tutorials[selectedTutorialIndex];
-    const step = tutorial.steps[currentStepIndex];
-    
-    const [code, setCode] = useState(step.code);
-    const [isCompleted, setIsCompleted] = useState(false);
-    
-    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-    const monacoRef = useRef<any>(null);
-    const editorContainerRef = useRef<HTMLDivElement>(null);
-    const lastWidthRef = useRef(0);
-
-
-    const constructPreview = (htmlCode: string, cssCode: string, jsCode: string) => {
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>${cssCode}</style>
-            </head>
-            <body>
-                ${htmlCode}
-                <script>${jsCode}</script>
-            </body>
-            </html>
-        `;
-    };
-    
-    const previewContent = useMemo(() => {
-        const lang = tutorial.language;
-        return constructPreview(
-            lang === 'html' ? code : '',
-            lang === 'css' ? code : '',
-            lang === 'javascript' ? code : ''
-        )
-    }, [code, tutorial.language]);
-
-    const validateCode = useCallback((currentCode: string) => {
-        if (!Array.isArray(featureMap) || !editorRef.current || !monacoRef.current) return;
-        
-        let issues = [];
-        if (tutorial.language === 'css') {
-            issues = scanCss(currentCode, 'style.css', featureMap);
-        } else if (tutorial.language === 'html') {
-            issues = scanHtml(currentCode, 'index.html', featureMap);
-        } else if (tutorial.language === 'javascript') {
-            issues = scanJavaScript(currentCode, 'script.js', featureMap);
-        }
-
-        const markers = issues
-            .filter(issue => issue.status === BaselineStatus.Limited)
-            .map(issue => ({
-                startLineNumber: issue.line,
-                startColumn: issue.column,
-                endLineNumber: issue.line,
-                endColumn: issue.column + issue.name.length,
-                message: `${issue.name} has limited browser support.`,
-                severity: monacoRef.current.MarkerSeverity.Warning,
-            }));
-
-        monacoRef.current.editor.setModelMarkers(editorRef.current.getModel(), 'baseline-scout', markers);
-    }, [featureMap, tutorial.language]);
-
-    const debouncedValidate = useCallback(debounce(validateCode, 500), [validateCode]);
-
-    const handleEditorChange = (value?: string) => {
-        const newCode = value || '';
-        setCode(newCode);
-        setIsCompleted(step.validate(newCode));
-        debouncedValidate(newCode);
-    };
-
-    const handleEditorMount: OnMount = (editor, monaco) => {
-        editorRef.current = editor;
-        monacoRef.current = monaco;
-        validateCode(editor.getValue());
-    };
-    
-    // Definitive fix for ResizeObserver loop
-    useEffect(() => {
-        const container = editorContainerRef.current;
-        if (!container) return;
-
-        const handleResize = debounce(() => {
-            window.requestAnimationFrame(() => {
-                const editor = editorRef.current;
-                const currentContainer = editorContainerRef.current;
-                if (editor && currentContainer) {
-                    const newWidth = currentContainer.getBoundingClientRect().width;
-                    // Guard: only layout if size changed significantly
-                    if (Math.abs(newWidth - lastWidthRef.current) > 5) {
-                        editor.layout();
-                        lastWidthRef.current = newWidth;
-                    }
-                }
-            });
-        }, 100);
-
-        const resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(container);
-
-        return () => {
-            resizeObserver.disconnect();
-            handleResize.cancel();
-        };
-    }, []); // Empty dependency array ensures this runs only once on mount.
-
-
-    useEffect(() => {
-        const newStep = tutorials[selectedTutorialIndex].steps[currentStepIndex];
-        setCode(newStep.code);
-        setIsCompleted(false);
-        if (editorRef.current && monacoRef.current) {
-            monacoRef.current.editor.setModelMarkers(editorRef.current.getModel(), 'baseline-scout', []);
-            setTimeout(() => validateCode(newStep.code), 100);
-        }
-    }, [selectedTutorialIndex, currentStepIndex, validateCode]);
-    
-    const goToStep = (index: number) => {
-        if(index >= 0 && index < tutorial.steps.length) {
-            setCurrentStepIndex(index);
-        }
-    }
-
     return (
-        <div>
-            <div className="text-center mb-12">
-                <h1 className="text-3xl font-bold mb-2">Learning Playground</h1>
-                <p className="text-slate-500 dark:text-slate-400">
-                    Get hands-on with modern web features through interactive tutorials with live validation.
+        <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center">
+                <h1 className="text-4xl font-black tracking-tight mb-2">Learn About Baseline</h1>
+                <p className="text-lg text-slate-500 dark:text-slate-400">
+                    Understand the "why" behind this tool and how Baseline helps create a more interoperable web.
                 </p>
             </div>
-            
-            <div className="grid lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-1 space-y-4">
-                     <h2 className="text-xl font-bold">Tutorials</h2>
-                    {tutorials.map((tut, index) => (
-                        <button key={tut.featureId} onClick={() => { setSelectedTutorialIndex(index); setCurrentStepIndex(0); }}
-                         className={`w-full text-left p-4 rounded-lg border transition-colors ${selectedTutorialIndex === index ? 'bg-cosmic-blue/10 border-cosmic-blue ring-2 ring-cosmic-blue' : 'bg-light-card dark:bg-dark-card border-light-border dark:border-dark-border hover:border-cosmic-blue/50'}`}
-                        >
-                            <h3 className="font-semibold">{tut.title}</h3>
-                        </button>
-                    ))}
-                </div>
 
-                <div className="lg:col-span-2 bg-light-card dark:bg-dark-card rounded-xl border border-light-border dark:border-dark-border overflow-hidden">
-                    <div className="p-6 border-b border-light-border dark:border-dark-border">
-                        <h3 className="text-lg font-bold">{step.title}</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">{step.description}</p>
-                    </div>
+            <div className="space-y-8">
+                <LearnCard icon={<BookOpen size={24} />} title="What is Baseline?">
+                    <p>
+                        Baseline is a project by Google that aims to clarify which web platform features are safe to use across major browsers. When a feature is part of Baseline, it means it has reached a stable and interoperable state.
+                    </p>
+                    <p>
+                        This provides a clear signal to developers that they can adopt these features without worrying about complex compatibility issues, prefixes, or polyfills for the majority of their users.
+                    </p>
+                </LearnCard>
 
-                    <div className="grid md:grid-cols-2 h-[500px]">
-                        <div ref={editorContainerRef} className="h-full w-full relative min-w-[300px] overflow-hidden">
-                             <EditorSettings />
-                             <MonacoEditor
-                                height="100%"
-                                language={tutorial.language}
-                                theme={syncTheme ? (theme === 'dark' ? 'vs-dark' : 'light') : 'light'}
-                                value={code}
-                                onChange={handleEditorChange}
-                                onMount={handleEditorMount}
-                                options={{ 
-                                    minimap: { enabled: false }, 
-                                    fontSize, 
-                                    wordWrap,
-                                    automaticLayout: false, // Important: disable automatic layout
-                                }}
-                            />
-                        </div>
-                        <div className="h-full w-full border-l border-light-border dark:border-dark-border min-w-[300px] overflow-hidden">
-                            <iframe
-                                srcDoc={previewContent}
-                                title="Live Preview"
-                                sandbox="allow-scripts"
-                                className="w-full h-full bg-white"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="p-4 bg-light-bg dark:bg-dark-bg/50 flex justify-between items-center border-t border-light-border dark:border-dark-border">
-                        <button onClick={() => goToStep(currentStepIndex - 1)} disabled={currentStepIndex === 0} className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-dark-border rounded-md font-semibold disabled:opacity-50">
-                            <ChevronLeft size={16} /> Prev
-                        </button>
-                        <div className="flex items-center gap-4">
-                            {tutorial.steps.map((_, i) => (
-                                <button key={i} onClick={() => goToStep(i)} className={`h-2.5 w-2.5 rounded-full transition-colors ${i === currentStepIndex ? 'bg-cosmic-blue' : 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400'}`}></button>
-                            ))}
-                        </div>
-                        <button onClick={() => goToStep(currentStepIndex + 1)} disabled={!isCompleted || currentStepIndex === tutorial.steps.length - 1} className="flex items-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-md font-semibold disabled:opacity-50">
-                            Next <ChevronRight size={16} />
-                        </button>
-                    </div>
-                     <motion.div 
-                        initial={false}
-                        animate={isCompleted ? 'visible' : 'hidden'}
-                        variants={{
-                            visible: { opacity: 1, height: 'auto', marginTop: '1rem' },
-                            hidden: { opacity: 0, height: 0, marginTop: '0rem' },
-                        }}
-                        className="p-4 border-t border-green-500 bg-green-500/10 text-green-700 dark:text-green-300 flex items-center gap-2 text-sm">
-                       <Check size={16} /> Well done! You've completed this step.
-                    </motion.div>
-                </div>
+                <LearnCard icon={<CheckCircle size={24} />} title="Feature Availability Status">
+                    <p>
+                        This tool uses the data from the Web Platform Dashboard and categorizes features into three main statuses:
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 pl-2">
+                        <li>
+                            <strong className="text-green-600 dark:text-green-400">Widely Available:</strong> The feature has been supported across all major browser engines for at least 30 months. This is the gold standard for stability.
+                        </li>
+                        <li>
+                            <strong className="text-blue-600 dark:text-blue-400">Newly Available:</strong> The feature is now supported in all major browsers, but it's new. It's generally safe to use, but you might want to check caniuse.com for specific version support if you need to support older browsers.
+                        </li>
+                        <li>
+                            <strong className="text-orange-600 dark:text-orange-400">Limited Availability:</strong> The feature is NOT supported in one or more major browsers. Using it in production will exclude a significant portion of users unless you provide fallbacks or polyfills.
+                        </li>
+                    </ul>
+                </LearnCard>
+
+                <LearnCard icon={<Code size={24} />} title="How Baseline Scout Helps">
+                    <p>
+                        Baseline Feature Scout is designed to make it easy to align your projects with the Baseline standard.
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 pl-2">
+                        <li>
+                            <strong>AI Chat:</strong> Get quick, context-aware answers about any web feature's status.
+                        </li>
+                        <li>
+                            <strong>Project Scanner:</strong> Get a comprehensive audit of your codebase to see how it aligns with Baseline, identifying any features with limited support.
+                        </li>
+                        <li>
+                            <strong>Export Tools:</strong> Integrate Baseline checks directly into your development workflow with tools like ESLint and GitHub Actions.
+                        </li>
+                    </ul>
+                </LearnCard>
+            </div>
+
+            <div className="text-center pt-8">
+                 <a
+                    href="https://web.dev/baseline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-cosmic-blue/30"
+                >
+                    Read the official Baseline documentation
+                </a>
             </div>
         </div>
     );

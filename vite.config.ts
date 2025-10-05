@@ -1,7 +1,7 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,6 +16,8 @@ export default defineConfig({
         description: 'AI-powered tool to discover, evaluate, and adopt modern web features.',
         theme_color: '#1a202c',
         background_color: '#1a202c',
+        start_url: '.',
+        display: 'standalone',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -37,4 +39,9 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
 });

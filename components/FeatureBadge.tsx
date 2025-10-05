@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { BaselineStatus } from '../types';
+import Tooltip from './Tooltip';
 
 interface FeatureBadgeProps {
   status: BaselineStatus;
@@ -37,7 +37,7 @@ const FeatureBadge: React.FC<FeatureBadgeProps> = ({ status }) => {
   const styles = statusStyles[status];
 
   return (
-    <div className="relative group">
+    <Tooltip content={styles.tooltip}>
       <div
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.bg} ${styles.text}`}
       >
@@ -46,11 +46,7 @@ const FeatureBadge: React.FC<FeatureBadgeProps> = ({ status }) => {
         </svg>
         {status}
       </div>
-      <div className="absolute bottom-full mb-2 w-64 p-2 text-sm text-white bg-slate-800 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
-        {styles.tooltip}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
-      </div>
-    </div>
+    </Tooltip>
   );
 };
 

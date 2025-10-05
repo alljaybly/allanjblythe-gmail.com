@@ -1,0 +1,48 @@
+{
+  "name": "baseline-feature-scout-vscode",
+  "displayName": "Baseline Feature Scout",
+  "description": "Scan your workspace for web feature compatibility using Baseline data, with inline suggestions and problem highlighting.",
+  "version": "0.1.0",
+  "publisher": "baseline-scout",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onCommand:baseline-scout.scanWorkspace"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "baseline-scout.scanWorkspace",
+        "title": "Baseline Scout: Scan Workspace"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^22.7.4",
+    "@types/babel__traverse": "^7.20.6",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^9.11.1",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.25.3",
+    "@babel/traverse": "^7.25.0",
+    "css-tree": "^2.3.1",
+    "htmlparser2": "^9.1.0",
+    "node-fetch": "^2.7.0"
+  }
+}

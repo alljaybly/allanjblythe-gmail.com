@@ -1,3 +1,4 @@
+// FIX: Changed React import to correctly augment the module.
 import 'react';
 
 declare module 'react' {
@@ -12,6 +13,12 @@ export enum BaselineStatus {
   Newly = 'newly available',
   Limited = 'limited availability',
   Unknown = 'unknown',
+}
+
+export enum Priority {
+  High = 'High',
+  Medium = 'Medium',
+  Low = 'Low',
 }
 
 // Type for api.webstatus.dev feature response
@@ -53,6 +60,7 @@ export interface ScanIssue {
   featureId: string;
   name: string; // Add feature name for better readability
   status: BaselineStatus;
+  priority: Priority;
   line: number;
   column: number;
   confidence?: number; // Add confidence for fuzzy matches

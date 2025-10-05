@@ -5,6 +5,10 @@ import { Search, Bot, CodeXml, FileCog, ArrowRight } from 'lucide-react';
 import { useDashboardAPI } from '../hooks/useDashboardAPI';
 import FeatureBadge from '../components/FeatureBadge';
 import { BaselineStatus, DashboardFeature } from '../types';
+import Tooltip from '../components/Tooltip';
+
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
 
 const StatCard = ({ value, label }: { value: string; label: string }) => (
   <div className="text-center">
@@ -16,7 +20,7 @@ const StatCard = ({ value, label }: { value: string; label: string }) => (
 );
 
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-  <motion.div 
+  <MotionDiv 
     className="bg-light-card dark:bg-dark-card p-6 rounded-xl border border-light-border dark:border-dark-border"
     whileHover={{ y: -5, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}
   >
@@ -25,7 +29,7 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; titl
     </div>
     <h3 className="text-lg font-semibold mb-2">{title}</h3>
     <p className="text-slate-500 dark:text-slate-400 text-sm">{description}</p>
-  </motion.div>
+  </MotionDiv>
 );
 
 const TrendingFeatures = () => {
@@ -45,7 +49,7 @@ const TrendingFeatures = () => {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {Array.isArray(features) && features.slice(0, 3).map((feature: DashboardFeature) => (
-                    <motion.div
+                    <MotionDiv
                         key={feature.identifier}
                         className="bg-light-card dark:bg-dark-card p-6 rounded-xl border border-light-border dark:border-dark-border cursor-pointer flex flex-col justify-between"
                         whileHover={{ y: -5, boxShadow: 'var(--tw-shadow-glow-blue)' }}
@@ -63,7 +67,7 @@ const TrendingFeatures = () => {
                         <div className="flex items-center gap-2 mt-4 text-cosmic-blue font-semibold text-sm">
                             Ask AI about this <ArrowRight size={16} />
                         </div>
-                    </motion.div>
+                    </MotionDiv>
                 ))}
             </div>
         </section>
@@ -86,7 +90,7 @@ const Home = () => {
     <div className="space-y-16 md:space-y-24">
       {/* Hero Section */}
       <section className="text-center pt-8 md:pt-16">
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -109,25 +113,31 @@ const Home = () => {
               placeholder="e.g., 'Is Container Queries ready for production?'"
               className="w-full pl-12 pr-4 py-3 rounded-full bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border focus:ring-2 focus:ring-cosmic-blue focus:outline-none"
             />
-             <button type="submit" className="absolute right-2 px-4 py-1.5 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity">
-              Ask AI
-            </button>
+            <Tooltip content="Submit your question to the AI">
+              <button type="submit" className="absolute right-2 px-4 py-1.5 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity">
+                Ask AI
+              </button>
+            </Tooltip>
           </form>
           <div className="mt-8 flex justify-center gap-4">
-            <button
-              onClick={() => navigate('/chat')}
-              className="px-6 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-cosmic-blue/30"
-            >
-              Start Chat
-            </button>
-            <button
-              onClick={() => navigate('/scan')}
-              className="px-6 py-3 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-full font-semibold hover:bg-slate-100 dark:hover:bg-dark-border transition-colors"
-            >
-              Upload Project
-            </button>
+            <Tooltip content="Go to the AI Chat page">
+              <button
+                onClick={() => navigate('/chat')}
+                className="px-6 py-3 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-cosmic-blue/30"
+              >
+                Start Chat
+              </button>
+            </Tooltip>
+            <Tooltip content="Go to the Project Scanner page">
+              <button
+                onClick={() => navigate('/scan')}
+                className="px-6 py-3 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-full font-semibold hover:bg-slate-100 dark:hover:bg-dark-border transition-colors"
+              >
+                Upload Project
+              </button>
+            </Tooltip>
           </div>
-        </motion.div>
+        </MotionDiv>
       </section>
 
       {/* Stats Section */}

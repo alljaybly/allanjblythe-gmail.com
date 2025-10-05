@@ -1,24 +1,23 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, CornerDownLeft, Sparkles, Loader } from 'lucide-react';
+import Fuse from 'fuse.js';
 import { useChatStore } from '../store/chatStore';
 import { MessageSender, ChatMessage, DashboardFeature } from '../types';
 import { GoogleGenAI } from '@google/genai';
 import { useDashboardAPI } from '../hooks/useDashboardAPI';
 import FeatureBadge from '../components/FeatureBadge';
 import { mapApiStatusToBaselineStatus } from '../services/codeScanner';
+import Tooltip from '../components/Tooltip';
 
 // Lazy load the modal component for better performance
 const FeatureDetailModal = lazy(() => import('../components/FeatureDetailModal'));
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-const findFeatureByName = (name: string, featureMap: DashboardFeature[] | null): DashboardFeature | undefined => {
-    if (!featureMap) return undefined;
-    const lowerName = name.toLowerCase().trim().replace(/api$/i, '').trim();
-    return featureMap.find(f => f.name.toLowerCase().trim() === lowerName);
-};
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
 
 const Chat = () => {
     const { messages, isLoading, addMessage, setLoading } = useChatStore();
@@ -29,6 +28,16 @@ const Chat = () => {
 
     const { data: allFeatures } = useDashboardAPI('/features?limit=2000');
 
+    const fuse = useMemo(() => {
+        if (!allFeatures) return null;
+        return new Fuse(allFeatures, {
+            keys: ['name', 'identifier', 'description'],
+            includeScore: true,
+            threshold: 0.4, // Lower threshold for better matching
+            minMatchCharLength: 3,
+        });
+    }, [allFeatures]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -36,7 +45,7 @@ const Chat = () => {
     useEffect(scrollToBottom, [messages]);
 
     const handleSendMessage = async (query: string) => {
-        if (!query.trim()) return;
+        if (!query.trim() || !fuse) return;
 
         const userMessage: ChatMessage = {
             sender: MessageSender.User,
@@ -47,7 +56,8 @@ const Chat = () => {
         setInput('');
 
         try {
-            const detectedFeature = findFeatureByName(query, allFeatures);
+            const searchResults = fuse.search(query);
+            const detectedFeature = searchResults.length > 0 ? searchResults[0].item : undefined;
             
             let prompt = `You are Baseline Feature Scout, an expert on web platform features and their browser support status according to the Baseline standard. Keep your answers concise and helpful for web developers. Here is the user's question: "${query}"`;
 
@@ -97,12 +107,12 @@ I have retrieved the following structured data for the most relevant feature fro
 
     useEffect(() => {
         const initialQuery = searchParams.get('q');
-        if (initialQuery && allFeatures) {
+        if (initialQuery && allFeatures && fuse) {
             handleSendMessage(initialQuery);
             searchParams.delete('q');
             setSearchParams(searchParams, { replace: true });
         }
-    }, [searchParams, allFeatures]);
+    }, [searchParams, allFeatures, fuse]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -113,7 +123,7 @@ I have retrieved the following structured data for the most relevant feature fro
         <div className="flex flex-col h-[calc(100vh-12rem)] max-w-3xl mx-auto bg-light-card dark:bg-dark-card rounded-xl border border-light-border dark:border-dark-border shadow-lg relative">
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                 {messages.map((message, index) => (
-                    <motion.div
+                    <MotionDiv
                         key={index}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -128,29 +138,31 @@ I have retrieved the following structured data for the most relevant feature fro
                         <div className={`max-w-md p-4 rounded-xl ${message.sender === MessageSender.User ? 'bg-cosmic-blue text-white rounded-br-none' : 'bg-light-bg dark:bg-dark-bg rounded-bl-none'}`}>
                             <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                             {message.feature && (
-                                <div
-                                    className="mt-4 p-3 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg border border-light-border dark:border-dark-border cursor-pointer hover:border-cosmic-blue/50 transition-colors"
-                                    onClick={() => setSelectedFeature(message.feature)}
-                                    aria-label={`View details for ${message.feature.name}`}
-                                    role="button"
-                                >
-                                    <div className="flex justify-between items-center">
-                                       <h4 className="font-bold text-base">{message.feature.name}</h4>
-                                       <FeatureBadge status={mapApiStatusToBaselineStatus(message.feature)} />
+                                <Tooltip content="Click to view more details">
+                                    <div
+                                        className="mt-4 p-4 rounded-xl text-white bg-gradient-to-br from-cosmic-blue to-indigo-600 shadow-lg cursor-pointer transition-all duration-300 hover:shadow-glow-blue hover:-translate-y-1"
+                                        onClick={() => setSelectedFeature(message.feature)}
+                                        aria-label={`View details for ${message.feature.name}`}
+                                        role="button"
+                                    >
+                                        <div className="flex justify-between items-center">
+                                           <h4 className="font-bold text-base">{message.feature.name}</h4>
+                                           <FeatureBadge status={mapApiStatusToBaselineStatus(message.feature)} />
+                                        </div>
+                                        <p className="text-xs text-indigo-100 mt-1 line-clamp-3">{message.feature.description}</p>
+                                        {message.feature.mdn_url && (
+                                            <a
+                                                href={message.feature.mdn_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-indigo-200 font-semibold hover:underline mt-2 inline-block"
+                                                onClick={(e) => e.stopPropagation()} // Prevent modal from opening when clicking link
+                                            >
+                                                Read on MDN &rarr;
+                                            </a>
+                                        )}
                                     </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-3">{message.feature.description}</p>
-                                    {message.feature.mdn_url && (
-                                        <a
-                                            href={message.feature.mdn_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-cosmic-blue font-semibold hover:underline mt-2 inline-block"
-                                            onClick={(e) => e.stopPropagation()} // Prevent modal from opening when clicking link
-                                        >
-                                            Read on MDN &rarr;
-                                        </a>
-                                    )}
-                                </div>
+                                </Tooltip>
                             )}
                         </div>
                         {message.sender === MessageSender.User && (
@@ -158,10 +170,10 @@ I have retrieved the following structured data for the most relevant feature fro
                                 <User size={20} />
                             </div>
                         )}
-                    </motion.div>
+                    </MotionDiv>
                 ))}
                 {isLoading && (
-                    <motion.div
+                    <MotionDiv
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-start gap-4"
@@ -175,7 +187,7 @@ I have retrieved the following structured data for the most relevant feature fro
                                 <p className="text-sm text-slate-500 dark:text-slate-400">Thinking...</p>
                             </div>
                         </div>
-                    </motion.div>
+                    </MotionDiv>
                 )}
                 <div ref={messagesEndRef} />
             </div>
@@ -189,14 +201,16 @@ I have retrieved the following structured data for the most relevant feature fro
                         disabled={isLoading}
                         className="w-full pl-4 pr-24 py-3 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border focus:ring-2 focus:ring-cosmic-blue focus:outline-none disabled:opacity-60"
                     />
-                    <button
-                        type="submit"
-                        disabled={isLoading || !input.trim()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'Sending' : 'Send'}
-                        <Send size={16} />
-                    </button>
+                    <Tooltip content="Send message">
+                        <button
+                            type="submit"
+                            disabled={isLoading || !input.trim()}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? 'Sending' : 'Send'}
+                            <Send size={16} />
+                        </button>
+                    </Tooltip>
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-xs text-slate-400">
                         <span>Press</span>
                         <CornerDownLeft size={12}/>

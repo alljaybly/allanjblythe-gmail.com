@@ -2,7 +2,7 @@ import * as babelParser from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as cssTree from 'css-tree';
 import * as htmlparser2 from 'htmlparser2';
-import { ScanIssue, BaselineStatus, DashboardFeature } from '../types';
+import { ScanIssue, BaselineStatus, DashboardFeature, Priority } from '../types';
 
 // FIX: Export mapApiStatusToBaselineStatus to be used in other components.
 export const mapApiStatusToBaselineStatus = (feature?: DashboardFeature): BaselineStatus => {
@@ -14,6 +14,19 @@ export const mapApiStatusToBaselineStatus = (feature?: DashboardFeature): Baseli
     default: return BaselineStatus.Unknown;
   }
 };
+
+const mapStatusToPriority = (status: BaselineStatus): Priority => {
+  switch (status) {
+    case BaselineStatus.Limited:
+      return Priority.High;
+    case BaselineStatus.Newly:
+      return Priority.Medium;
+    case BaselineStatus.Unknown:
+    default:
+      return Priority.Low;
+  }
+};
+
 
 // --- JavaScript Scanner ---
 export const scanJavaScript = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {
@@ -33,11 +46,13 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
         if (path.isIdentifier({ name: 'structuredClone' }) && path.node.loc) {
           const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
           if (feature) {
+            const status = mapApiStatusToBaselineStatus(feature);
             issues.push({
               file: filename,
               featureId: feature.identifier,
               name: feature.name,
-              status: mapApiStatusToBaselineStatus(feature),
+              status: status,
+              priority: mapStatusToPriority(status),
               line: path.node.loc.start.line,
               column: path.node.loc.start.column,
             });
@@ -63,11 +78,13 @@ export const scanCss = (code: string, filename: string, featureMap: DashboardFea
             if (node.type === 'Property' && node.loc) {
                 const feature = cssFeatures.find(f => f.identifier.includes(node.name));
                 if (feature) {
+                    const status = mapApiStatusToBaselineStatus(feature);
                     issues.push({
                         file: filename,
                         featureId: feature.identifier,
                         name: feature.name,
-                        status: mapApiStatusToBaselineStatus(feature),
+                        status: status,
+                        priority: mapStatusToPriority(status),
                         line: node.loc.start.line,
                         column: node.loc.start.column,
                     });
@@ -93,11 +110,13 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
             // Check for tags
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
+                const status = mapApiStatusToBaselineStatus(tagFeature);
                 issues.push({
                     file: filename,
                     featureId: tagFeature.identifier,
                     name: tagFeature.name,
-                    status: mapApiStatusToBaselineStatus(tagFeature),
+                    status: status,
+                    priority: mapStatusToPriority(status),
                     line: line,
                     column: col,
                 });
@@ -106,11 +125,13 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
             for (const attr in attribs) {
                  const attrFeature = htmlFeatures.find(f => f.identifier.includes(`attribute-${attr}`));
                  if (attrFeature) {
+                     const status = mapApiStatusToBaselineStatus(attrFeature);
                      issues.push({
                         file: filename,
                         featureId: attrFeature.identifier,
                         name: attrFeature.name,
-                        status: mapApiStatusToBaselineStatus(attrFeature),
+                        status: status,
+                        priority: mapStatusToPriority(status),
                         line: line,
                         column: col,
                      });

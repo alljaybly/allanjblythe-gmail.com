@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, AlertTriangle, Info, XCircle, FileText, ChevronDown, ClipboardCopy, ClipboardCheck } from 'lucide-react';
-import { ScanResult, ScanIssue, BaselineStatus } from '../types';
+import { CheckCircle, AlertTriangle, Info, XCircle, FileText, ChevronDown, ClipboardCopy, ClipboardCheck, Filter, ArrowUpDown } from 'lucide-react';
+import { ScanResult, ScanIssue, BaselineStatus, Priority } from '../types';
 import FeatureBadge from './FeatureBadge';
 import { useScanStore } from '../store/scanStore';
+import Tooltip from './Tooltip';
+
+// FIX: Assign motion components to variables to help with type inference.
+const MotionDiv = motion.div;
+const MotionCircle = motion.circle;
 
 const ScoreCircle = ({ score }: { score: number }) => {
     const getScoreColor = () => {
@@ -27,7 +32,7 @@ const ScoreCircle = ({ score }: { score: number }) => {
                     cx="50"
                     cy="50"
                 />
-                <motion.circle
+                <MotionCircle
                     className={getScoreColor()}
                     strokeWidth="10"
                     strokeDasharray={circumference}
@@ -74,7 +79,7 @@ const StatCard = ({ status, count, icon }: { status: BaselineStatus, count: numb
 };
 
 
-const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileContents: Map<string, string> | null }) => {
+const IssuesTable = ({ issuesWithIndex, fileContents, onPriorityChange }: { issuesWithIndex: {issue: ScanIssue, originalIndex: number}[], fileContents: Map<string, string> | null, onPriorityChange: (index: number, priority: Priority) => void }) => {
     const [openFile, setOpenFile] = useState<string | null>(null);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -98,19 +103,20 @@ const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileConten
         }
     };
     
-    const groupedIssues = issues.reduce((acc, issue) => {
+    const groupedIssues = issuesWithIndex.reduce((acc, item) => {
+        const { issue } = item;
         if (!acc[issue.file]) {
             acc[issue.file] = [];
         }
-        acc[issue.file].push(issue);
+        acc[issue.file].push(item);
         return acc;
-    }, {} as Record<string, ScanIssue[]>);
+    }, {} as Record<string, {issue: ScanIssue, originalIndex: number}[]>);
 
     const toggleFile = (file: string) => {
         setOpenFile(openFile === file ? null : file);
     };
 
-    if (issues.length === 0) {
+    if (issuesWithIndex.length === 0) {
         return (
             <div className="text-center p-8 bg-green-500/10 rounded-lg border border-green-500/20">
                 <CheckCircle className="mx-auto text-green-500" size={48} />
@@ -120,6 +126,12 @@ const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileConten
         );
     }
     
+    const priorityClasses: Record<Priority, string> = {
+        [Priority.High]: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800 focus:ring-red-500',
+        [Priority.Medium]: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-800 focus:ring-yellow-500',
+        [Priority.Low]: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:border-gray-600 focus:ring-gray-500',
+    };
+
     return (
         <div className="space-y-2">
             {Object.entries(groupedIssues).map(([file, fileIssues]) => (
@@ -134,7 +146,7 @@ const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileConten
                     </button>
                     <AnimatePresence>
                     {openFile === file && (
-                        <motion.div
+                        <MotionDiv
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
@@ -147,40 +159,53 @@ const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileConten
                                             <th scope="col" className="px-6 py-3">Line</th>
                                             <th scope="col" className="px-6 py-3">Feature</th>
                                             <th scope="col" className="px-6 py-3">Status</th>
+                                            <th scope="col" className="px-6 py-3">Priority</th>
                                             <th scope="col" className="px-6 py-3 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {fileIssues.map((issue, index) => {
-                                            const key = `${issue.file}-${issue.line}-${index}`;
+                                        {fileIssues.map(({issue, originalIndex}) => {
+                                            const key = `${originalIndex}`;
                                             return (
                                             <tr key={key} className="border-b last:border-b-0 border-light-border dark:border-dark-border">
                                                 <td className="px-6 py-4 font-mono">{issue.line}:{issue.column}</td>
                                                 <td className="px-6 py-4 font-semibold">{issue.name}</td>
                                                 <td className="px-6 py-4"><FeatureBadge status={issue.status} /></td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => handleCopy(issue, index)}
-                                                        className="flex items-center gap-2 text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-dark-border hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
-                                                        title="Copy code snippet"
+                                                <td className="px-6 py-4">
+                                                   <select
+                                                        value={issue.priority}
+                                                        onChange={(e) => onPriorityChange(originalIndex, e.target.value as Priority)}
+                                                        className={`rounded-full py-1 px-3 border text-xs font-medium appearance-none focus:outline-none focus:ring-2 ${priorityClasses[issue.priority]}`}
                                                     >
-                                                        {copiedKey === key ? (
-                                                            <>
-                                                                <ClipboardCheck size={14} className="text-green-500" /> Copied!
-                                                            </>
-                                                        ) : (
-                                                             <>
-                                                                <ClipboardCopy size={14} /> Copy
-                                                            </>
-                                                        )}
-                                                    </button>
+                                                        <option value={Priority.High}>High</option>
+                                                        <option value={Priority.Medium}>Medium</option>
+                                                        <option value={Priority.Low}>Low</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Tooltip content="Copy code snippet" position="left">
+                                                      <button
+                                                          onClick={() => handleCopy(issue, originalIndex)}
+                                                          className="flex items-center gap-2 text-xs px-2 py-1 rounded-md bg-slate-200 dark:bg-dark-border hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                                                      >
+                                                          {copiedKey === key ? (
+                                                              <>
+                                                                  <ClipboardCheck size={14} className="text-green-500" /> Copied!
+                                                              </>
+                                                          ) : (
+                                                               <>
+                                                                  <ClipboardCopy size={14} /> Copy
+                                                              </>
+                                                          )}
+                                                      </button>
+                                                    </Tooltip>
                                                 </td>
                                             </tr>
                                         )})}
                                     </tbody>
                                 </table>
                             </div>
-                        </motion.div>
+                        </MotionDiv>
                     )}
                     </AnimatePresence>
                 </div>
@@ -190,10 +215,36 @@ const IssuesTable = ({ issues, fileContents }: { issues: ScanIssue[], fileConten
 };
 
 const ScanResultDashboard = ({ result }: { result: ScanResult }) => {
-    const { fileContents } = useScanStore();
+    const { fileContents, updateIssuePriority } = useScanStore();
+    const [filterBy, setFilterBy] = useState<Priority | 'All'>('All');
+    const [sortBy, setSortBy] = useState<'priority' | 'file'>('priority');
+
+    const processedIssues = useMemo(() => {
+        if (!result?.issues) return [];
+
+        const issuesWithIndex = result.issues.map((issue, index) => ({ issue, originalIndex: index }));
+
+        const filtered = filterBy === 'All'
+            ? issuesWithIndex
+            : issuesWithIndex.filter(({ issue }) => issue.priority === filterBy);
+        
+        const sorted = [...filtered].sort((a, b) => {
+            if (sortBy === 'priority') {
+                const priorityOrder = { [Priority.High]: 0, [Priority.Medium]: 1, [Priority.Low]: 2 };
+                return priorityOrder[a.issue.priority] - priorityOrder[b.issue.priority] || a.originalIndex - b.originalIndex;
+            }
+            if (sortBy === 'file') {
+                return a.issue.file.localeCompare(b.issue.file) || a.issue.line - b.issue.line;
+            }
+            return 0;
+        });
+        
+        return sorted;
+
+    }, [result?.issues, filterBy, sortBy]);
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
+        <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 p-8 bg-light-card dark:bg-dark-card rounded-xl border border-light-border dark:border-dark-border">
                 <ScoreCircle score={result.score} />
                 <div className="text-center md:text-left">
@@ -215,10 +266,41 @@ const ScanResultDashboard = ({ result }: { result: ScanResult }) => {
             </div>
             
             <div>
-                <h2 className="text-2xl font-bold mb-4 text-center">Detected Issues</h2>
-                 <IssuesTable issues={result.issues} fileContents={fileContents} />
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-2">Actionable Tasks</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6">Review, prioritize, and address features with limited compatibility.</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mb-4 bg-light-card dark:bg-dark-card rounded-lg border border-light-border dark:border-dark-border">
+                    <div className="flex items-center gap-2">
+                        <Filter size={16} className="text-slate-500" />
+                        <span className="font-semibold text-sm">Filter by Priority:</span>
+                        <div className="flex items-center gap-1 bg-light-bg dark:bg-dark-bg p-1 rounded-md">
+                            {(['All', Priority.High, Priority.Medium, Priority.Low] as const).map(p => (
+                                <button key={p} onClick={() => setFilterBy(p)} className={`px-3 py-1 text-xs rounded ${filterBy === p ? 'bg-cosmic-blue text-white shadow' : 'hover:bg-slate-200 dark:hover:bg-dark-border'}`}>
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <ArrowUpDown size={16} className="text-slate-500" />
+                        <label htmlFor="sort-by" className="font-semibold text-sm">Sort by:</label>
+                        <select
+                            id="sort-by"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'priority' | 'file')}
+                            className="bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-cosmic-blue focus:outline-none"
+                        >
+                            <option value="priority">Priority</option>
+                            <option value="file">File Path</option>
+                        </select>
+                    </div>
+                </div>
+
+                 <IssuesTable issuesWithIndex={processedIssues} fileContents={fileContents} onPriorityChange={updateIssuePriority} />
             </div>
-        </motion.div>
+        </MotionDiv>
     );
 };
 

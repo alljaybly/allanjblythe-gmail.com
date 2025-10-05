@@ -1,10 +1,15 @@
 
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileCode2, Terminal } from 'lucide-react';
 import jsyaml from 'js-yaml';
 import { useScanStore } from '../store/scanStore';
 import { Link } from 'react-router-dom';
+import Tooltip from '../components/Tooltip';
+
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
 
 const ExportCard = ({ title, description, icon, onExport, disabled }: { title: string, description: string, icon: React.ReactNode, onExport: () => void, disabled?: boolean }) => (
     <div className={`bg-light-card dark:bg-dark-card p-6 rounded-xl border border-light-border dark:border-dark-border ${disabled ? 'opacity-50' : ''}`}>
@@ -15,14 +20,16 @@ const ExportCard = ({ title, description, icon, onExport, disabled }: { title: s
             <h3 className="text-lg font-semibold">{title}</h3>
         </div>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{description}</p>
-        <button
-            onClick={onExport}
-            disabled={disabled}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-md font-semibold hover:opacity-90 transition-opacity disabled:cursor-not-allowed"
-        >
-            <Download size={16} />
-            Generate & Download
-        </button>
+        <Tooltip content={disabled ? 'Scan a project first' : `Generate and download the ${title} file`}>
+          <button
+              onClick={onExport}
+              disabled={disabled}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-md font-semibold hover:opacity-90 transition-opacity disabled:cursor-not-allowed"
+          >
+              <Download size={16} />
+              Generate & Download
+          </button>
+        </Tooltip>
     </div>
 );
 
@@ -111,12 +118,12 @@ const Export = () => {
             </div>
 
             {generatedContent && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 max-w-4xl mx-auto">
+                <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 max-w-4xl mx-auto">
                     <h3 className="font-semibold mb-2">Generated {generatedContent.title}:</h3>
                     <pre className="bg-dark-card p-4 rounded-md text-sm text-white overflow-x-auto">
                         <code>{generatedContent.content}</code>
                     </pre>
-                </motion.div>
+                </MotionDiv>
             )}
         </div>
     );

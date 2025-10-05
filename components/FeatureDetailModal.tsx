@@ -10,6 +10,9 @@ interface FeatureDetailModalProps {
   onClose: () => void;
 }
 
+// FIX: Assign motion.div to a variable to help with type inference.
+const MotionDiv = motion.div;
+
 const BrowserSupportIcon = ({ browser }: { browser: string }) => {
     const name = browser.toLowerCase();
     if (name.includes('chrome')) return <span title="Chrome">Cr</span>;
@@ -22,14 +25,14 @@ const BrowserSupportIcon = ({ browser }: { browser: string }) => {
 const FeatureDetailModal: React.FC<FeatureDetailModalProps> = ({ feature, onClose }) => {
   return (
     <AnimatePresence>
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
-        <motion.div
+        <MotionDiv
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -103,8 +106,8 @@ const FeatureDetailModal: React.FC<FeatureDetailModalProps> = ({ feature, onClos
                 </div>
             )}
           </div>
-        </motion.div>
-      </motion.div>
+        </MotionDiv>
+      </MotionDiv>
     </AnimatePresence>
   );
 };

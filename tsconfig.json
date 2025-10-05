@@ -17,9 +17,9 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src", "components", "pages", "store", "hooks", "App.tsx", "types.ts", "constants.ts", "index.tsx", "components/ErrorBoundary.tsx"],
+  "include": ["src", "components", "pages", "store", "hooks", "App.tsx", "types.ts", "constants.ts", "index.tsx", "components/ErrorBoundary.tsx", "src/__tests__"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
