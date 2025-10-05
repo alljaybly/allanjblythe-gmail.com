@@ -32,13 +32,13 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
     try {
         const ast = babelParser.parse(code, {
             sourceType: 'module',
-            plugins: ['typescript', 'jsx', 'classProperties', 'privateMethods'],
+            plugins: ['typescript', 'jsx', 'classProperties', 'classPrivateMethods'],
             errorRecovery: true,
         });
 
         traverse(ast, {
-            enter(path) {
-                if (path.isIdentifier({ name: 'structuredClone' }) && path.node.loc) {
+            Identifier(path) {
+                if (path.node.name === 'structuredClone' && path.node.loc) {
                     const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
                     if (feature) {
                         const status = mapApiStatusToBaselineStatus(feature);
@@ -98,8 +98,8 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
 
     const parser = new Parser({
         onopentag(name, attribs) {
-            const line = parser.line;
-            const col = parser.column;
+            const line = (parser as any).line;
+            const col = (parser as any).column;
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
                 const status = mapApiStatusToBaselineStatus(tagFeature);
