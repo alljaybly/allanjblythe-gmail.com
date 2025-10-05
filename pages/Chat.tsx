@@ -88,7 +88,7 @@ I have retrieved the following structured data for the most relevant feature fro
             
             const aiMessage: ChatMessage = {
                 sender: MessageSender.AI,
-                text: response.text,
+                text: response.text ?? "Sorry, I couldn't generate a response. Please try again.",
                 feature: detectedFeature,
             };
             addMessage(aiMessage);

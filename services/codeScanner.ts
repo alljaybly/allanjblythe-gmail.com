@@ -1,5 +1,5 @@
 import * as babelParser from '@babel/parser';
-import traverse from '@babel/traverse';
+import traverse, { NodePath } from '@babel/traverse';
 import * as cssTree from 'css-tree';
 import { Parser } from 'htmlparser2';
 import { ScanIssue, BaselineStatus, DashboardFeature, Priority } from '../types';
@@ -41,7 +41,7 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
     });
 
     traverse(ast, {
-      enter(path) {
+      enter(path: NodePath) {
         // Example: Detect structuredClone by name
         if (path.isIdentifier({ name: 'structuredClone' }) && path.node.loc) {
           const feature = jsFeatures.find(f => f.identifier.includes('structuredClone'));
@@ -105,8 +105,8 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
     const parser = new Parser({
         onopentag(name, attribs) {
             // FIX: Use parser.line and parser.column instead of the removed getLocation() method.
-            const line = parser.line;
-            const col = parser.column;
+            const line = (parser as any).line;
+            const col = (parser as any).column;
             // Check for tags
             const tagFeature = htmlFeatures.find(f => f.identifier.includes(`element-${name}`));
             if (tagFeature) {
@@ -138,7 +138,7 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
                  }
             }
         }
-    }, { xmlMode: false, recognizeSelfClosing: true, withStartIndices: true, withEndIndices: true, withLocations: true });
+    }, { xmlMode: false, recognizeSelfClosing: true, withStartIndices: true, withEndIndices: true } as any);
 
     try {
       parser.write(code);
