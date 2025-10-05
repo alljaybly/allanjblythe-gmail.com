@@ -1,7 +1,7 @@
 import * as babelParser from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as cssTree from 'css-tree';
-import * as htmlparser2 from 'htmlparser2';
+import { Parser } from 'htmlparser2';
 import { ScanIssue, BaselineStatus, DashboardFeature, Priority } from '../types';
 
 // FIX: Export mapApiStatusToBaselineStatus to be used in other components.
@@ -36,7 +36,7 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
   try {
     const ast = babelParser.parse(code, {
       sourceType: 'module',
-      plugins: ['typescript', 'jsx', 'classProperties', 'privateMethods'],
+      plugins: ['typescript', 'jsx', 'classProperties', 'classPrivateMethods'],
       errorRecovery: true,
     });
 
@@ -74,7 +74,7 @@ export const scanCss = (code: string, filename: string, featureMap: DashboardFea
 
     try {
         const ast = cssTree.parse(code, { positions: true, onParseError: () => {} });
-        cssTree.walk(ast, (node) => {
+        cssTree.walk(ast, (node: cssTree.CssNode) => {
             if (node.type === 'Property' && node.loc) {
                 const feature = cssFeatures.find(f => f.identifier.includes(node.name));
                 if (feature) {
@@ -102,7 +102,7 @@ export const scanHtml = (code: string, filename: string, featureMap: DashboardFe
     const issues: ScanIssue[] = [];
     const htmlFeatures = featureMap.filter(f => f.identifier.startsWith('html-'));
 
-    const parser = new htmlparser2.Parser({
+    const parser = new Parser({
         onopentag(name, attribs) {
             // FIX: Use parser.line and parser.column instead of the removed getLocation() method.
             const line = parser.line;

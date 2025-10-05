@@ -141,7 +141,7 @@ I have retrieved the following structured data for the most relevant feature fro
                                 <Tooltip content="Click to view more details">
                                     <div
                                         className="mt-4 p-4 rounded-xl text-white bg-gradient-to-br from-cosmic-blue to-indigo-600 shadow-lg cursor-pointer transition-all duration-300 hover:shadow-glow-blue hover:-translate-y-1"
-                                        onClick={() => setSelectedFeature(message.feature)}
+                                        onClick={() => setSelectedFeature(message.feature || null)}
                                         aria-label={`View details for ${message.feature.name}`}
                                         role="button"
                                     >

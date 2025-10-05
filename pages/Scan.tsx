@@ -42,7 +42,6 @@ const getFeatureMap = async () => {
 
 const runScan = async (
     files: StoredFile[], 
-    fileContents: Map<string, string>, 
     onProgress: (p: number) => void
 ): Promise<ScanResult> => {
     let allIssues: ScanIssue[] = [];
@@ -143,7 +142,7 @@ const Scan = () => {
                 fileContentsMap.set(file.path, file.content);
             }
 
-            const scanResult = await runScan(storedFiles, fileContentsMap, setProgress);
+            const scanResult = await runScan(storedFiles, setProgress);
             setResult(scanResult);
             setFileContents(fileContentsMap);
         } catch (e) {
