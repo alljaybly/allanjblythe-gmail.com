@@ -110,6 +110,9 @@ To run the extension in development mode:
     - Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and type `Baseline Scout: Scan Workspace`.
     - Observe the results in the "Problems" panel, as inline squiggles in your code, and in the status bar.
 
+## ⚡️ Project Updates
+- Added voice input to AI Chat, fixed PWA icon 404. Deploy to Netlify with VITE_GEMINI_API_KEY.
+
 ## 🗺️ Roadmap
 
 We have many ideas to make Baseline Feature Scout even better! Here's a glimpse of what we're thinking about:
