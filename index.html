@@ -11,49 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // Sync tailwind.config.js for CDN
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            colors: {
-              'cosmic-blue': '#0A84FF',
-              'cosmic-orange': '#FF6B35',
-              'dark-bg': '#0D1117',
-              'dark-card': '#161B22',
-              'dark-border': '#30363d',
-              'light-bg': '#f6f8fa',
-              'light-card': '#ffffff',
-              'light-border': '#d0d7de',
-            },
-            keyframes: {
-              gradient: {
-                '0%': { backgroundPosition: '0% 50%' },
-                '50%': { backgroundPosition: '100% 50%' },
-                '100%': { backgroundPosition: '0% 50%' },
-              },
-              pulse: {
-                '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-                '50%': { opacity: 0.8, transform: 'scale(1.05)' },
-              },
-            },
-            animation: {
-              gradient: 'gradient 15s ease infinite',
-              pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            },
-            boxShadow: {
-              'glow-blue': '0 0 15px rgba(10, 132, 255, 0.5)',
-              'glow-orange': '0 0 15px rgba(255, 107, 53, 0.5)',
-            }
-          },
-        },
-      }
-    </script>
+    
   <script type="importmap">
 {
   "imports": {

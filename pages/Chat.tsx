@@ -1,3 +1,6 @@
+// FIX: Add a triple-slash directive to include Vite client types for `import.meta.env`.
+/// <reference types="vite/client" />
+
 import React, { useState, useEffect, useRef, lazy, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -14,7 +17,8 @@ import Tooltip from '../components/Tooltip';
 // Lazy load the modal component for better performance
 const FeatureDetailModal = lazy(() => import('../components/FeatureDetailModal'));
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const isApiConfigured = !!import.meta.env.VITE_GEMINI_API_KEY;
+const ai = isApiConfigured ? new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY }) : null;
 
 // FIX: Assign motion.div to a variable to help with type inference.
 const MotionDiv = motion.div;
@@ -45,7 +49,7 @@ const Chat = () => {
     useEffect(scrollToBottom, [messages]);
 
     const handleSendMessage = async (query: string) => {
-        if (!query.trim() || !fuse) return;
+        if (!query.trim() || !fuse || !ai) return;
 
         const userMessage: ChatMessage = {
             sender: MessageSender.User,
@@ -197,14 +201,14 @@ I have retrieved the following structured data for the most relevant feature fro
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask about a web feature..."
-                        disabled={isLoading}
+                        placeholder={isApiConfigured ? "Ask about a web feature..." : "AI Chat is disabled"}
+                        disabled={isLoading || !isApiConfigured}
                         className="w-full pl-4 pr-24 py-3 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border focus:ring-2 focus:ring-cosmic-blue focus:outline-none disabled:opacity-60"
                     />
                     <Tooltip content="Send message">
                         <button
                             type="submit"
-                            disabled={isLoading || !input.trim()}
+                            disabled={isLoading || !input.trim() || !isApiConfigured}
                             className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-cosmic-blue text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isLoading ? 'Sending' : 'Send'}
