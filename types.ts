@@ -1,5 +1,4 @@
 // FIX: Changed React import to correctly augment the module.
-import 'react';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
