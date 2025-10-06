@@ -1,5 +1,5 @@
-// FIX: Changed React import to use namespace import (`* as React`) to ensure `React.Component` is correctly typed, which resolves issues when `esModuleInterop` is not enabled.
-import * as React from 'react';
+// FIX: Changed React import to a default import, which is consistent with the rest of the project and correctly resolves component types.
+import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {

@@ -1,4 +1,3 @@
-
 // FIX: Imported defineConfig from 'vitest/config' to include test configuration types and fix type resolution.
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
@@ -11,12 +10,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // By setting manifest to false, we instruct the plugin to not generate a manifest.
+      // This allows our custom `public/manifest.webmanifest` to be used without conflicts.
+      manifest: false,
       workbox: {
+        // Ensure PNGs are included for PWA offline caching.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
-      // By removing the inline manifest object, vite-plugin-pwa will automatically
-      // look for a manifest.webmanifest file in the public directory,
-      // fixing the 404 errors for PWA icons.
     }),
   ],
   resolve: {

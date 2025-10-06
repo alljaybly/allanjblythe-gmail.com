@@ -113,6 +113,7 @@ To run the extension in development mode:
 ## ⚡️ Project Updates
 - Added voice input to AI Chat, fixed PWA icon 404. Deploy to Netlify with VITE_GEMINI_API_KEY.
 - Fixed PWA icon 404 by updating vite.config.ts to use manifest.webmanifest. Deploy to Netlify.
+- Fixed PWA manifest errors and icon 404s with updated manifest.webmanifest and vite.config.ts.
 
 ## 🗺️ Roadmap
 

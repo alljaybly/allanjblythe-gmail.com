@@ -1,3 +1,6 @@
+// FIX: Import 'react' to ensure module augmentation works correctly.
+import 'react';
+
 // FIX: Added global types for import.meta.env to support Vite environment variables.
 declare global {
     interface ImportMetaEnv {
