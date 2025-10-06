@@ -5,7 +5,14 @@ import { BookOpen, CheckCircle, Code } from 'lucide-react';
 
 const MotionDiv = motion.div;
 
-const LearnCard = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
+// FIX: Refactored to use a dedicated props interface and React.FC for better type clarity, which resolves the children property error.
+interface LearnCardProps {
+    icon: React.ReactNode;
+    title: string;
+    children: React.ReactNode;
+}
+
+const LearnCard: React.FC<LearnCardProps> = ({ icon, title, children }) => (
     <MotionDiv
         className="bg-light-card dark:bg-dark-card p-6 rounded-xl border border-light-border dark:border-dark-border"
         initial={{ opacity: 0, y: 20 }}

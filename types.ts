@@ -1,4 +1,6 @@
 // FIX: Changed React import to correctly augment the module.
+// FIX: Added `import 'react'` to make this file a module and resolve the error "Invalid module name in augmentation, module 'react' cannot be found.".
+import 'react';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {

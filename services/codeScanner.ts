@@ -86,9 +86,8 @@ export const scanCss = (code: string, filename: string, featureMap: DashboardFea
     try {
         const ast = cssTree.parse(code, { positions: true, onParseError: () => {} });
         cssTree.walk(ast, {
-            visit: 'Property',
-            enter: (node: cssTree.Property) => {
-                if (node.loc) {
+            enter: (node: cssTree.CssNode) => {
+                if (node.type === 'Property' && node.loc) {
                     const feature = cssFeatures.find(f => f.identifier.includes(node.name));
                     if (feature) {
                         const status = mapApiStatusToBaselineStatus(feature);

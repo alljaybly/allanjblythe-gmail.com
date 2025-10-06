@@ -1,5 +1,6 @@
 // FIX: Changed React import to be consistent with the project and resolve typing issues.
-import React from 'react';
+// FIX: Changed import to 'import * as React' to fix issue where 'this.props' was not found on the class component due to TypeScript module resolution settings.
+import * as React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
