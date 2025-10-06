@@ -18,7 +18,7 @@ This project includes both a **web application** for a rich, visual experience a
 
 <!-- Placeholder for a GIF or screenshot of the app -->
 <div align="center">
-  <em>[Screenshot of the Baseline Feature Scout dashboard]</em>
+  <em>![Baseline Feature Scout Learning Playground](/images/Baseline .png)</em>
 </div>
 
 ---
