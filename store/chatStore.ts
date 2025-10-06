@@ -1,5 +1,3 @@
-// FIX: Add a triple-slash directive to include Vite client types for `import.meta.env`.
-/// <reference types="vite/client" />
 
 import { create } from 'zustand';
 import { ChatMessage, MessageSender } from '../types';

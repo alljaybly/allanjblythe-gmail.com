@@ -1,5 +1,12 @@
-// FIX: An import statement is added to ensure this file is treated as a module. This is a requirement for augmenting the 'react' module and resolves the "cannot find module" error.
-import 'react';
+// FIX: Added global types for import.meta.env to support Vite environment variables.
+declare global {
+    interface ImportMetaEnv {
+        readonly VITE_GEMINI_API_KEY: string | undefined;
+    }
+    interface ImportMeta {
+        readonly env: ImportMetaEnv;
+    }
+}
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {

@@ -1,5 +1,5 @@
-// FIX: Changed the React import to `import React from 'react';` for project consistency and to resolve an issue where `this.props` was not being correctly typed on the class component.
-import React from 'react';
+// FIX: Changed React import to use namespace import (`* as React`) to ensure `React.Component` is correctly typed, which resolves issues when `esModuleInterop` is not enabled.
+import * as React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
