@@ -1,5 +1,4 @@
-// FIX: Changed React import to correctly augment the module.
-// FIX: Added `import 'react'` to make this file a module and resolve the error "Invalid module name in augmentation, module 'react' cannot be found.".
+// FIX: An import statement is added to ensure this file is treated as a module. This is a requirement for augmenting the 'react' module and resolves the "cannot find module" error.
 import 'react';
 
 declare module 'react' {

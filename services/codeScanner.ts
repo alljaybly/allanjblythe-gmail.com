@@ -81,34 +81,69 @@ export const scanJavaScript = (code: string, filename: string, featureMap: Dashb
 // --- CSS Scanner ---
 export const scanCss = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {
     const issues: ScanIssue[] = [];
-    const cssFeatures = featureMap.filter(f => f.identifier.startsWith('css-'));
+    const cssFeatures = featureMap.filter(f => f.identifier.startsWith('css-properties-'));
 
     try {
         const ast = cssTree.parse(code, { positions: true, onParseError: () => {} });
+        
+        // Use cssTree.walk to traverse the AST. We're looking for 'Declaration' nodes.
         cssTree.walk(ast, {
             enter: (node: cssTree.CssNode) => {
-                if (node.type === 'Property' && node.loc) {
-                    const feature = cssFeatures.find(f => f.identifier.includes(node.name));
-                    if (feature) {
-                        const status = mapApiStatusToBaselineStatus(feature);
-                        issues.push({
-                            file: filename,
-                            featureId: feature.identifier,
-                            name: feature.name,
-                            status: status,
-                            priority: mapStatusToPriority(status),
-                            line: node.loc.start.line,
-                            column: node.loc.start.column,
-                        });
+                // A 'Declaration' node represents a full 'property: value' pair.
+                // This is the correct type to check, resolving the original TS error.
+                if (node.type === 'Declaration') {
+                    const propertyName = node.property;
+
+                    // 1. Check for features that are just the property name itself (e.g., 'container-type').
+                    const propFeature = cssFeatures.find(f => f.identifier === `css-properties-${propertyName}`);
+                    if (propFeature) {
+                        const status = mapApiStatusToBaselineStatus(propFeature);
+                        if (status === BaselineStatus.Limited) {
+                            issues.push({
+                                file: filename,
+                                featureId: propFeature.identifier,
+                                name: propFeature.name,
+                                status: status,
+                                priority: mapStatusToPriority(status),
+                                line: node.loc?.start.line ?? 1, // Use optional chaining for safety
+                                column: node.loc?.start.column ?? 1,
+                            });
+                        }
                     }
+
+                    // 2. Traverse the 'value' of the declaration to find specific keyword values (like 'subgrid').
+                    cssTree.walk(node.value, (valueNode) => {
+                        if (valueNode.type === 'Identifier') {
+                            const valueName = valueNode.name;
+                            const featureIdentifier = `css-properties-${propertyName}-${valueName}`;
+                            const valueFeature = cssFeatures.find(f => f.identifier === featureIdentifier);
+
+                            if (valueFeature) {
+                                const status = mapApiStatusToBaselineStatus(valueFeature);
+                                if (status === BaselineStatus.Limited || status === BaselineStatus.Newly) {
+                                    issues.push({
+                                        file: filename,
+                                        featureId: valueFeature.identifier,
+                                        name: `${propertyName}: ${valueName}`,
+                                        status: status,
+                                        priority: mapStatusToPriority(status),
+                                        line: valueNode.loc?.start.line ?? node.loc?.start.line ?? 1,
+                                        column: valueNode.loc?.start.column ?? node.loc?.start.column ?? 1,
+                                    });
+                                }
+                            }
+                        }
+                    });
                 }
             }
         });
     } catch (error) {
         console.error(`Failed to parse CSS in ${filename}:`, error);
     }
-    return issues;
-}
+    // Return unique issues, as some logic might overlap.
+    return [...new Map(issues.map(item => [`${item.featureId}@${item.line}`, item])).values()];
+};
+
 
 // --- HTML Scanner ---
 export const scanHtml = (code: string, filename: string, featureMap: DashboardFeature[]): ScanIssue[] => {

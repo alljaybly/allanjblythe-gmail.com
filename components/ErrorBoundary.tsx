@@ -1,6 +1,5 @@
-// FIX: Changed React import to be consistent with the project and resolve typing issues.
-// FIX: Changed import to 'import * as React' to fix issue where 'this.props' was not found on the class component due to TypeScript module resolution settings.
-import * as React from 'react';
+// FIX: Changed the React import to `import React from 'react';` for project consistency and to resolve an issue where `this.props` was not being correctly typed on the class component.
+import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -13,7 +12,6 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Removed explicit 'public' modifiers to follow convention and avoid potential type inference issues.
   state: State = {
     hasError: false,
     error: undefined,
