@@ -16,8 +16,7 @@ This project includes both a **web application** for a rich, visual experience a
 
 ---
 
-<!-- Placeholder f<img width="1286" height="605" alt="Baseline " src="https://github.com/user-attachments/assets/f3586c49-fdbe-4646-8970-4dc73e42c859" />
-or a GIF or screenshot of the app -->
+<!-- Placeholder for a GIF or screenshot of the app -->
 <div align="center">
   <em>[Screenshot of the Baseline Feature Scout dashboard]</em>
 </div>
@@ -113,6 +112,7 @@ To run the extension in development mode:
 
 ## ⚡️ Project Updates
 - Added voice input to AI Chat, fixed PWA icon 404. Deploy to Netlify with VITE_GEMINI_API_KEY.
+- Fixed PWA icon 404 by updating vite.config.ts to use manifest.webmanifest. Deploy to Netlify.
 
 ## 🗺️ Roadmap
 

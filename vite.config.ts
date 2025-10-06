@@ -14,33 +14,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
-      manifest: {
-        name: 'Baseline Feature Scout',
-        short_name: 'FeatureScout',
-        description: 'AI-powered tool to discover, evaluate, and adopt modern web features.',
-        theme_color: '#1a202c',
-        background_color: '#1a202c',
-        start_url: '.',
-        display: 'standalone',
-        icons: [
-          {
-            src: '/pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          }
-        ],
-      },
+      // By removing the inline manifest object, vite-plugin-pwa will automatically
+      // look for a manifest.webmanifest file in the public directory,
+      // fixing the 404 errors for PWA icons.
     }),
   ],
   resolve: {
